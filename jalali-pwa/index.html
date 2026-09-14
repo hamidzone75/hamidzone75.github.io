@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="description" content="تقویم شمسی، قمری و میلادی با یادداشت، یادآوری و آلارم" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>تقویم شمسی • قمری • میلادی</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <div class="top-bar">
+      <div id="shift-info" class="shift-info" title="برنامه شیفت">
+        <span class="shift-line" id="shift-text">—</span>
+      </div>
+      <div class="top-bar-icons">
+        <button id="sound-toggle" class="icon-chip" title="صدا" aria-label="صدا">🔊</button>
+        <button id="theme-toggle" class="icon-chip" title="تغییر تم" aria-label="تم">🌙</button>
+      </div>
+    </div>
+    <div id="dashboard-strip" class="dashboard-strip" aria-label="خلاصه امروز"></div>
+    <div id="countdown-strip" class="countdown-strip hidden" aria-label="شمارش معکوس"></div>
+    <header class="today-header">
+      <div class="header-top-row">
+        <div class="weekday" id="weekday">—</div>
+        <div class="time" id="time">—</div>
+      </div>
+      <div id="holiday-banner" class="holiday-banner hidden"></div>
+
+      <div class="dates-grid">
+        <div class="date-block jalali">
+          <div class="jalali-header">
+            <span class="date-label">شمسی</span>
+            <button id="note-btn" class="note-btn" aria-label="یادداشت" title="یادداشت">📝</button>
+            <button id="attach-btn" class="attach-btn" aria-label="پیوست" title="پیوست فایل">📎</button>
+            <button id="pin-day-btn" class="pin-day-btn" aria-label="ستاره" title="ستاره‌دار کردن روز">⭐</button>
+            <select id="day-color-select" class="day-color-select" title="رنگ روز" aria-label="رنگ روز">
+              <option value="none">رنگ</option>
+              <option value="red">قرمز</option>
+              <option value="orange">نارنجی</option>
+              <option value="yellow">زرد</option>
+              <option value="green">سبز</option>
+              <option value="blue">آبی</option>
+              <option value="purple">بنفش</option>
+              <option value="pink">صورتی</option>
+            </select>
+            <button id="reminder-btn" class="reminder-btn" aria-label="یادآوری" title="یادآوری / آلارم">🔔</button>
+          </div>
+          <span class="date-value" id="jalali-date">—</span>
+        </div>
+        <div class="date-block hijri">
+          <div class="hijri-header">
+            <span class="date-label">قمری</span>
+            <button id="hijri-settings-btn" class="settings-btn" aria-label="تنظیمات قمری">⚙</button>
+          </div>
+          <span class="date-value" id="hijri-date">—</span>
+        </div>
+        <div class="date-block gregorian">
+          <span class="date-label">میلادی</span>
+          <span class="date-value" id="gregorian-date">—</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="calendar-section">
+      <div class="calendar-nav">
+        <button id="next-month" class="nav-btn" aria-label="ماه قبل">‹</button>
+        <button type="button" class="month-title" id="month-title" title="انتخاب ماه و سال">—</button>
+        <button id="prev-month" class="nav-btn" aria-label="ماه بعد">›</button>
+      </div>
+      <div class="weekdays-row" id="weekdays-row"></div>
+      <div class="days-grid" id="days-grid"></div>
+      <button id="go-today" class="go-today-btn">برو به امروز</button>
+    </section>
+
+    <!-- Today's reminders list -->
+    <section id="today-reminders" class="today-reminders hidden">
+      <div class="today-reminders-header">
+        <h3>🔔 یادآوری‌های امروز</h3>
+        <span id="today-rem-count" class="today-rem-count"></span>
+      </div>
+      <div id="today-rem-list" class="today-rem-list"></div>
+    </section>
+
+    <footer>
+      <div class="backup-actions">
+        <button id="open-search-btn" class="backup-btn" title="جستجو">🔎 جستجو</button>
+        <button id="open-week-btn" class="backup-btn" title="هفت روز آینده">📅 هفته</button>
+        <button id="open-tools-btn" class="backup-btn" title="ابزارها">🛠 ابزارها</button>
+        <button id="open-extras-btn" class="backup-btn" title="امکانات بیشتر">✨ بیشتر</button>
+        <button id="focus-toggle-btn" class="backup-btn" title="حالت تمرکز">🎯 تمرکز</button>
+        <button id="manage-reminders-btn" class="backup-btn" title="مدیریت اعلان‌ها">🔔 اعلان‌ها</button>
+        <button id="backup-btn" class="backup-btn" title="پشتیبان‌گیری">⬇️ پشتیبان</button>
+        <button id="restore-btn" class="backup-btn" title="بازیابی">⬆️ بازیابی</button>
+        <input type="file" id="restore-file" accept="application/json,.json" hidden />
+      </div>
+      <p>تقویم سه‌گانه • یادداشت • یادآوری • تعطیلات</p>
+    </footer>
+  </div>
+
+  <!-- Hijri Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-backdrop" id="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>تنظیمات تقویم قمری</h2>
+        <button id="close-modal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">سال قمری را انتخاب و طول ماه‌ها را تنظیم کنید. ذخیره فقط برای همان سال است.</p>
+        <div class="year-select-row">
+          <label for="hijri-year-select">سال قمری:</label>
+          <select id="hijri-year-select" class="year-select"></select>
+        </div>
+        <div class="offset-control">
+          <label>جابجایی روز قمری (سراسری):</label>
+          <div class="offset-buttons">
+            <button id="offset-minus" class="offset-btn">−</button>
+            <span id="offset-value" class="offset-value">۰</span>
+            <button id="offset-plus" class="offset-btn">+</button>
+          </div>
+          <p class="offset-hint" id="offset-hint">بدون جابجایی</p>
+        </div>
+        <div class="month-lengths">
+          <label>طول ماه‌های سال انتخاب‌شده:</label>
+          <div id="month-lengths-list" class="month-list"></div>
+          <p class="note">اگر صفر ۲۹ روزه باشد، شهادت امام رضا روی ۲۹ صفر نمایش داده می‌شود.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-settings" class="primary-btn">ذخیره تنظیمات</button>
+        <button id="reset-settings" class="secondary-btn">بازنشانی این سال</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note Dialog -->
+  <div id="note-modal" class="modal hidden">
+    <div class="modal-backdrop" id="note-backdrop"></div>
+    <div class="modal-content note-modal-content">
+      <div class="modal-header">
+        <h2>یادداشت</h2>
+        <button id="close-note-modal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="note-date-label" id="note-date-label">—</p>
+        <textarea id="note-textarea" class="note-textarea" rows="5" placeholder="یادداشت خود را بنویسید..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="save-note-btn" class="primary-btn">💾 ذخیره</button>
+        <button id="delete-note-btn" class="danger-btn hidden">حذف</button>
+        <button id="close-note-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reminder Dialog -->
+  <div id="reminder-modal" class="modal hidden">
+    <div class="modal-backdrop" id="reminder-backdrop"></div>
+    <div class="modal-content reminder-modal-content">
+      <div class="modal-header">
+        <h2>یادآوری / آلارم</h2>
+        <button id="close-reminder-modal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="note-date-label" id="reminder-date-label">—</p>
+
+        <div class="form-group">
+          <label>عنوان یادآوری</label>
+          <input type="text" id="rem-title" class="form-input" placeholder="مثلاً: جلسه، دارو، تماس..." />
+        </div>
+
+        <div class="form-group">
+          <label>زمان آلارم</label>
+          <input type="time" id="rem-time" class="form-input" value="09:00" />
+        </div>
+
+        <div class="form-group">
+          <label>نوع تکرار</label>
+          <select id="rem-recur" class="form-input">
+            <option value="once">یک‌بار (فقط همین روز)</option>
+            <option value="daily">هر روز</option>
+            <option value="weekly">هر هفته (روز خاص)</option>
+            <option value="monthly">هر ماه</option>
+            <option value="yearly">هر سال</option>
+            <option value="everyNDays">هر n روز</option>
+            <option value="everyNWeeks">هر n هفته</option>
+            <option value="everyNMonths">هر n ماه</option>
+            <option value="everyNYears">هر n سال</option>
+            <option value="weekdays">روزهای هفته (شنبه تا پنج‌شنبه)</option>
+            <option value="weekends">جمعه‌ها</option>
+            <option value="evenDays">روزهای زوج هفته (شنبه، دوشنبه، چهارشنبه)</option>
+            <option value="oddDays">روزهای فرد هفته (یکشنبه، سه‌شنبه، پنج‌شنبه)</option>
+            <option value="nthWeekday">اولین/دومین/.../آخرین روز هفته در ماه</option>
+          </select>
+        </div>
+
+        <div class="form-group hidden" id="rem-n-group">
+          <label>مقدار n</label>
+          <input type="number" id="rem-n" class="form-input" min="1" max="365" value="1" />
+        </div>
+
+        <div class="form-group hidden" id="rem-weekday-group">
+          <label>روز هفته</label>
+          <select id="rem-weekday" class="form-input">
+            <option value="0">شنبه</option>
+            <option value="1">یکشنبه</option>
+            <option value="2">دوشنبه</option>
+            <option value="3">سه‌شنبه</option>
+            <option value="4">چهارشنبه</option>
+            <option value="5">پنج‌شنبه</option>
+            <option value="6">جمعه</option>
+          </select>
+        </div>
+
+        <div class="form-group hidden" id="rem-nth-group">
+          <label>کدام؟</label>
+          <select id="rem-nth" class="form-input">
+            <option value="1">اولین</option>
+            <option value="2">دومین</option>
+            <option value="3">سومین</option>
+            <option value="4">چهارمین</option>
+            <option value="-1">آخرین</option>
+          </select>
+        </div>
+
+        <!-- List of existing reminders for this day -->
+        <div id="rem-list-section" class="rem-list-section hidden">
+          <label>یادآوری‌های این روز:</label>
+          <div id="rem-list" class="rem-list"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="save-reminder-btn" class="primary-btn">🔔 ذخیره یادآوری</button>
+        <button id="close-reminder-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Manage All Reminders Modal -->
+  <div id="manage-reminders-modal" class="modal hidden">
+    <div class="modal-backdrop" id="manage-reminders-backdrop"></div>
+    <div class="modal-content manage-modal-content">
+      <div class="modal-header">
+        <h2>مدیریت اعلان‌ها و یادآوری‌ها</h2>
+        <button id="close-manage-modal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="manage-toolbar">
+          <span id="manage-count" class="manage-count">۰ مورد</span>
+          <button id="request-notif-perm-btn" class="backup-btn">فعال‌سازی اعلان سیستم</button>
+        </div>
+        <p id="notif-perm-status" class="notif-perm-status"></p>
+        <div id="manage-rem-list" class="manage-rem-list"></div>
+        <p id="manage-empty" class="today-rem-empty hidden">هیچ یادآوری‌ای ثبت نشده است.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="close-manage-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Confirm Delete Modal -->
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-backdrop" id="confirm-backdrop"></div>
+    <div class="modal-content confirm-modal-content">
+      <div class="modal-header">
+        <h2 id="confirm-title">تأیید حذف</h2>
+        <button id="confirm-close-x" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" class="confirm-message">آیا از حذف این مورد مطمئن هستید؟</p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirm-ok-btn" class="danger-btn">بله، حذف شود</button>
+        <button id="confirm-cancel-btn" class="secondary-btn">انصراف</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Day Summary Modal (notes + reminders) -->
+  <div id="day-summary-modal" class="modal hidden">
+    <div class="modal-backdrop" id="day-summary-backdrop"></div>
+    <div class="modal-content day-summary-content">
+      <div class="modal-header">
+        <h2 id="day-summary-title">خلاصه روز</h2>
+        <button id="day-summary-close-x" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="note-date-label" id="day-summary-date">—</p>
+        <div id="day-summary-holiday" class="day-summary-section holiday-sec">
+          <h3>🎉 مناسبت / تعطیل</h3>
+          <div class="day-summary-item" id="day-summary-holiday-text"></div>
+        </div>
+        <div class="day-summary-section notes">
+          <h3>📝 یادداشت‌ها</h3>
+          <div id="day-summary-notes"></div>
+        </div>
+        <div class="day-summary-section reminders">
+          <h3>🔔 یادآوری‌ها</h3>
+          <div id="day-summary-reminders"></div>
+        </div>
+        <div class="day-summary-toggle-row" id="day-summary-startup-row">
+          <span>نمایش خودکار هنگام باز شدن اپ</span>
+          <label class="manage-toggle" title="فعال / غیرفعال">
+            <input type="checkbox" id="day-summary-startup-toggle" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="day-summary-close-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Month / Year Picker Modal -->
+  <div id="month-picker-modal" class="modal hidden">
+    <div class="modal-backdrop" id="month-picker-backdrop"></div>
+    <div class="modal-content month-picker-content">
+      <div class="modal-header">
+        <h2>انتخاب ماه و سال</h2>
+        <button id="month-picker-close-x" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="picker-year">سال شمسی (۱۳۰۰ تا ۱۶۰۰)</label>
+          <div class="year-picker-row">
+            <button type="button" id="picker-year-minus" class="offset-btn" aria-label="سال قبل">−</button>
+            <input type="text" id="picker-year" class="form-input year-picker-input" inputmode="numeric" maxlength="4" autocomplete="off" />
+            <button type="button" id="picker-year-plus" class="offset-btn" aria-label="سال بعد">+</button>
+          </div>
+          <p id="picker-year-error" class="picker-error hidden">سال باید بین ۱۳۰۰ تا ۱۶۰۰ باشد</p>
+        </div>
+        <div class="form-group">
+          <label>ماه</label>
+          <div id="picker-months" class="picker-months"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="month-picker-apply" class="primary-btn">اعمال</button>
+        <button id="month-picker-close-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Feature modal: search / week / occasions / a11y / stats -->
+  <div id="feature-modal" class="modal hidden">
+    <div class="modal-backdrop" id="feature-backdrop"></div>
+    <div class="modal-content feature-modal-content">
+      <div class="modal-header">
+        <h2>ابزارها</h2>
+        <button id="feature-close-x" class="close-btn">×</button>
+      </div>
+      <div class="feature-tabs">
+        <button type="button" class="feature-tab active" id="tab-search">جستجو</button>
+        <button type="button" class="feature-tab" id="tab-week">هفته</button>
+        <button type="button" class="feature-tab" id="tab-occasions">مناسبت</button>
+        <button type="button" class="feature-tab" id="tab-a11y">دسترسی</button>
+        <button type="button" class="feature-tab" id="tab-stats">آمار</button>
+      </div>
+      <div class="modal-body">
+        <div id="panel-search">
+          <input type="search" id="search-input" class="form-input" placeholder="جستجو در یادداشت و یادآوری..." />
+          <div id="search-results" class="search-results"></div>
+        </div>
+        <div id="panel-week" class="hidden">
+          <p class="modal-desc">۷ روز آینده همراه با شیفت، مناسبت، یادداشت و یادآوری</p>
+          <div id="week-view-body"></div>
+        </div>
+        <div id="panel-occasions" class="hidden">
+          <p class="modal-desc">مناسبت شخصی (مثلاً تولد) برای تاریخ شمسی</p>
+          <div class="form-group"><label>عنوان</label><input id="occ-title" class="form-input" placeholder="مثلاً تولد ..." /></div>
+          <div class="occ-date-row">
+            <div class="form-group"><label>روز</label><input id="occ-jd" class="form-input" inputmode="numeric" maxlength="2" placeholder="روز" /></div>
+            <div class="form-group"><label>ماه</label><input id="occ-jm" class="form-input" inputmode="numeric" maxlength="2" placeholder="ماه" /></div>
+            <div class="form-group"><label>سال</label><input id="occ-jy" class="form-input" inputmode="numeric" maxlength="4" placeholder="سال" /></div>
+          </div>
+          <button type="button" id="occ-save-btn" class="primary-btn">ذخیره مناسبت</button>
+          <div id="occasions-list" class="occasions-list"></div>
+        </div>
+        <div id="panel-a11y" class="hidden">
+          <p class="modal-desc">تنظیمات دسترس‌پذیری</p>
+          <label class="a11y-row"><span>فونت بزرگ‌تر</span><input type="checkbox" id="a11y-large-font" /></label>
+          <label class="a11y-row"><span>کنتراست بالا</span><input type="checkbox" id="a11y-high-contrast" /></label>
+          <label class="a11y-row"><span>کاهش انیمیشن و حرکت</span><input type="checkbox" id="a11y-reduced-motion" /></label>
+        </div>
+        <div id="panel-stats" class="hidden">
+          <p class="modal-desc">آمار ساده داده‌های ذخیره‌شده</p>
+          <div id="stats-body"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="feature-close-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Attachments modal -->
+  <div id="attachments-modal" class="modal hidden">
+    <div class="modal-backdrop" id="att-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>پیوست‌های روز</h2>
+        <button id="close-att-modal" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="note-date-label" id="att-date-label">—</p>
+        <p class="modal-desc">می‌توانید تصویر، صدا، ویدئو، متن یا هر فایل دیگری را به این روز پیوست کنید (حداکثر ۲۵ مگابایت برای هر فایل).</p>
+        <input type="file" id="att-file-input" multiple hidden />
+        <button type="button" id="att-add-btn" class="primary-btn">➕ افزودن فایل</button>
+        <div id="att-list" class="att-list"></div>
+        <div id="att-preview" class="att-preview hidden"></div>
+        <div id="att-text-editor" class="att-text-editor hidden">
+          <label class="form-group"><span>ویرایش متن</span>
+            <textarea id="att-text-area" class="note-textarea" rows="8"></textarea>
+          </label>
+          <div class="modal-footer" style="margin-top:8px">
+            <button type="button" id="att-text-save" class="primary-btn">💾 ذخیره متن</button>
+            <button type="button" id="att-text-cancel" class="secondary-btn">انصراف</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="close-att-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- PIN gate -->
+  <div id="pin-gate" class="pin-gate hidden">
+    <div class="pin-gate-card">
+      <h2>🔒 ورود به تقویم</h2>
+      <p>کد PIN را وارد کنید</p>
+      <input type="password" id="pin-unlock-input" class="form-input" inputmode="numeric" maxlength="8" placeholder="PIN" />
+      <button type="button" id="pin-unlock-btn" class="primary-btn">ورود</button>
+    </div>
+  </div>
+
+  <!-- Extras modal -->
+  <div id="extras-modal" class="modal hidden">
+    <div class="modal-backdrop" id="extras-backdrop"></div>
+    <div class="modal-content feature-modal-content">
+      <div class="modal-header">
+        <h2>امکانات بیشتر</h2>
+        <button id="extras-close-x" class="close-btn">×</button>
+      </div>
+      <div class="feature-tabs">
+        <button type="button" class="feature-tab active" id="extab-templates">قالب</button>
+        <button type="button" class="feature-tab" id="extab-copy">کپی روز</button>
+        <button type="button" class="feature-tab" id="extab-countdown">شمارش</button>
+        <button type="button" class="feature-tab" id="extab-trash">سطل</button>
+        <button type="button" class="feature-tab" id="extab-report">گزارش</button>
+        <button type="button" class="feature-tab" id="extab-year">سال</button>
+        <button type="button" class="feature-tab" id="extab-security">امنیت</button>
+        <button type="button" class="feature-tab" id="extab-more">بیشتر</button>
+      </div>
+      <div class="modal-body">
+        <div id="exp-templates">
+          <p class="modal-desc">افزودن قالب یادداشت به روز انتخاب‌شده</p>
+          <div class="tpl-row">
+            <button type="button" class="tpl-btn" data-tpl="meeting">جلسه</button>
+            <button type="button" class="tpl-btn" data-tpl="medicine">دارو</button>
+            <button type="button" class="tpl-btn" data-tpl="call">تماس</button>
+            <button type="button" class="tpl-btn" data-tpl="task">کار</button>
+          </div>
+        </div>
+        <div id="exp-copy" class="hidden">
+          <p class="modal-desc">کپی یادداشت/یادآوری/رنگ/ستاره از روز جاری. مقصد: شماره روز شمسی همین ماه (مثلاً ۱۵,۲۰) یا نسبی (+1,-2)</p>
+          <label class="a11y-row"><span>یادداشت</span><input type="checkbox" id="copy-note" checked /></label>
+          <label class="a11y-row"><span>یادآوری</span><input type="checkbox" id="copy-rem" checked /></label>
+          <label class="a11y-row"><span>رنگ</span><input type="checkbox" id="copy-color" checked /></label>
+          <label class="a11y-row"><span>ستاره</span><input type="checkbox" id="copy-pin" checked /></label>
+          <input id="copy-target-days" class="form-input" placeholder="مثلاً 18,20 یا +1,+2" />
+          <button type="button" id="copy-day-btn" class="primary-btn">اجرای کپی</button>
+        </div>
+        <div id="exp-countdown" class="hidden">
+          <p class="modal-desc">شمارش معکوس تا یک تاریخ شمسی</p>
+          <input id="cd-title" class="form-input" placeholder="عنوان رویداد" />
+          <div class="occ-date-row">
+            <input id="cd-jd" class="form-input" inputmode="numeric" placeholder="روز" />
+            <input id="cd-jm" class="form-input" inputmode="numeric" placeholder="ماه" />
+            <input id="cd-jy" class="form-input" inputmode="numeric" placeholder="سال" />
+          </div>
+          <button type="button" id="cd-add-btn" class="primary-btn">افزودن</button>
+          <div id="countdown-manage-list"></div>
+        </div>
+        <div id="exp-trash" class="hidden">
+          <p class="modal-desc">موارد حذف‌شده تا ۱۴ روز قابل بازگردانی هستند</p>
+          <div id="trash-list"></div>
+        </div>
+        <div id="exp-report" class="hidden">
+          <div id="report-body"></div>
+        </div>
+        <div id="exp-year" class="hidden">
+          <div class="year-nav">
+            <button type="button" id="year-prev-btn" class="nav-btn">‹</button>
+            <strong id="year-view-label">—</strong>
+            <button type="button" id="year-next-btn" class="nav-btn">›</button>
+          </div>
+          <div id="year-view-body"></div>
+        </div>
+        <div id="exp-security" class="hidden">
+          <p id="pin-status" class="modal-desc">—</p>
+          <input id="pin-input" class="form-input" type="password" inputmode="numeric" maxlength="8" placeholder="PIN جدید (۴ تا ۸ رقم)" />
+          <input id="pin-input2" class="form-input" type="password" inputmode="numeric" maxlength="8" placeholder="تکرار PIN" />
+          <button type="button" id="pin-save-btn" class="primary-btn">فعال‌سازی PIN</button>
+          <button type="button" id="pin-clear-btn" class="danger-btn">حذف PIN</button>
+        </div>
+        <div id="exp-more" class="hidden">
+          <label class="a11y-row"><span>نمایش اطلاعات شیفت</span><input type="checkbox" id="shift-visible-toggle" checked /></label>
+          <label class="a11y-row"><span>حالت تمرکز</span><input type="checkbox" id="focus-mode-toggle" /></label>
+          <p class="modal-desc">پشتیبان پیوست‌ها (جدا از بکاپ متنی)</p>
+          <button type="button" id="att-backup-btn" class="backup-btn">⬇️ پشتیبان پیوست‌ها</button>
+          <button type="button" id="att-restore-btn" class="backup-btn">⬆️ بازیابی پیوست‌ها</button>
+          <input type="file" id="att-restore-file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="extras-close-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="sounds.js"></script>
+  <script src="jalali.js"></script>
+  <script src="holidays.js"></script>
+  <script src="reminders.js"></script>
+  <script src="features.js"></script>
+  <script src="attachments.js"></script>
+  <script src="extras.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
