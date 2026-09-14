@@ -1684,7 +1684,7 @@ html[data-a11y-motion="reduce"] *::after {
   gap: 12px;
 }
 
-/* Focus mode: hide heavy sections */
+/* Focus mode: hide heavy sections — exit control stays visible */
 body.focus-mode .calendar-section,
 body.focus-mode .today-reminders,
 body.focus-mode footer,
@@ -1694,6 +1694,26 @@ body.focus-mode .dates-grid .date-block.gregorian {
 }
 body.focus-mode .dashboard-strip {
   order: 3;
+}
+.exit-focus-btn {
+  width: 100%;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 4px;
+}
+#exit-focus-btn.hidden {
+  display: none !important;
+}
+body.focus-mode #exit-focus-btn:not(.hidden) {
+  display: block !important;
 }
 
 

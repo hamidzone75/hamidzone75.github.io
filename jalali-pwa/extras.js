@@ -176,9 +176,18 @@ function setFocusMode(on) {
   applyFocusMode();
 }
 function applyFocusMode() {
-  document.body.classList.toggle("focus-mode", isFocusMode());
+  const on = isFocusMode();
+  document.body.classList.toggle("focus-mode", on);
   const btn = document.getElementById("focus-toggle-btn");
-  if (btn) btn.classList.toggle("active", isFocusMode());
+  if (btn) {
+    btn.classList.toggle("active", on);
+    btn.textContent = on ? "🎯 خروج تمرکز" : "🎯 تمرکز";
+    btn.title = on ? "خروج از حالت تمرکز" : "حالت تمرکز";
+  }
+  const exitBtn = document.getElementById("exit-focus-btn");
+  if (exitBtn) exitBtn.classList.toggle("hidden", !on);
+  const cb = document.getElementById("focus-mode-toggle");
+  if (cb) cb.checked = on;
 }
 
 // ---------- Templates ----------
