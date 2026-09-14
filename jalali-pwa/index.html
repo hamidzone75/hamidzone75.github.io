@@ -25,7 +25,6 @@
         <button id="theme-toggle" class="icon-chip" title="تغییر تم" aria-label="تم">🌙</button>
       </div>
     </div>
-    <button type="button" id="exit-focus-btn" class="exit-focus-btn hidden" title="خروج از حالت تمرکز">🎯 خروج از تمرکز</button>
     <div id="dashboard-strip" class="dashboard-strip" aria-label="خلاصه امروز"></div>
     <div id="countdown-strip" class="countdown-strip hidden" aria-label="شمارش معکوس"></div>
     <header class="today-header">
@@ -421,9 +420,8 @@
       <div class="modal-body">
         <p class="note-date-label" id="att-date-label">—</p>
         <p class="modal-desc">می‌توانید تصویر، صدا، ویدئو، متن یا هر فایل دیگری را به این روز پیوست کنید (حداکثر ۲۵ مگابایت برای هر فایل).</p>
-        <input type="file" id="att-file-input" class="att-file-input-native" multiple />
-        <label for="att-file-input" id="att-add-label" class="primary-btn att-add-label">➕ انتخاب فایل از حافظه</label>
-        <p class="modal-desc att-hint">فایل را از حافظه، گالری یا Downloads انتخاب کنید. نیازی به دسترسی میکروفون نیست.</p>
+        <input type="file" id="att-file-input" multiple hidden />
+        <button type="button" id="att-add-btn" class="primary-btn">➕ افزودن فایل</button>
         <div id="att-list" class="att-list"></div>
         <div id="att-preview" class="att-preview hidden"></div>
         <div id="att-text-editor" class="att-text-editor hidden">

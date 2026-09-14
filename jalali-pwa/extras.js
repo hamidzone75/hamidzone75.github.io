@@ -176,18 +176,9 @@ function setFocusMode(on) {
   applyFocusMode();
 }
 function applyFocusMode() {
-  const on = isFocusMode();
-  document.body.classList.toggle("focus-mode", on);
+  document.body.classList.toggle("focus-mode", isFocusMode());
   const btn = document.getElementById("focus-toggle-btn");
-  if (btn) {
-    btn.classList.toggle("active", on);
-    btn.textContent = on ? "🎯 خروج تمرکز" : "🎯 تمرکز";
-    btn.title = on ? "خروج از حالت تمرکز" : "حالت تمرکز";
-  }
-  const exitBtn = document.getElementById("exit-focus-btn");
-  if (exitBtn) exitBtn.classList.toggle("hidden", !on);
-  const cb = document.getElementById("focus-mode-toggle");
-  if (cb) cb.checked = on;
+  if (btn) btn.classList.toggle("active", isFocusMode());
 }
 
 // ---------- Templates ----------
@@ -285,10 +276,7 @@ async function exportAttachmentsBackup() {
   });
   const out = [];
   for (const r of rows) {
-    let buf;
-    if (r.data != null) buf = r.data;
-    else if (r.blob instanceof Blob) buf = await r.blob.arrayBuffer();
-    else continue;
+    const buf = await r.blob.arrayBuffer();
     const bytes = new Uint8Array(buf);
     let binary = "";
     const chunk = 0x8000;
@@ -338,9 +326,9 @@ async function importAttachmentsBackup(file) {
       dayKey: f.dayKey,
       name: f.name,
       mime: f.mime,
-      size: f.size || bytes.byteLength,
+      size: f.size,
       kind: f.kind,
-      data: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      blob: new Blob([bytes], { type: f.mime || "application/octet-stream" }),
       createdAt: f.createdAt || Date.now(),
       updatedAt: f.updatedAt || Date.now()
     };
@@ -567,12 +555,6 @@ function setupExtras() {
   document.getElementById("focus-toggle-btn")?.addEventListener("click", () => {
     setFocusMode(!isFocusMode());
     showToast(isFocusMode() ? "حالت تمرکز فعال شد" : "حالت تمرکز خاموش شد");
-  });
-  document.getElementById("exit-focus-btn")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setFocusMode(false);
-    showToast("حالت تمرکز خاموش شد");
   });
   document.getElementById("extras-close-x")?.addEventListener("click", closeExtrasModal);
   document.getElementById("extras-close-btn")?.addEventListener("click", closeExtrasModal);
