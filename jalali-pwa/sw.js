@@ -1,4 +1,4 @@
-const CACHE_NAME = "jalali-calendar-v37";
+const CACHE_NAME = "jalali-calendar-v38-barnameh";
 const ASSETS = [
   "./",
   "./index.html",
@@ -12,9 +12,9 @@ const ASSETS = [
   "./extras.js",
   "./sounds.js",
   "./manifest.json",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/apple-touch-icon.png"
+  "./icons/bn-icon-192.png",
+  "./icons/bn-icon-512.png",
+  "./icons/bn-apple-180.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -58,8 +58,8 @@ self.addEventListener("message", (event) => {
   event.waitUntil(
     self.registration.showNotification(title || "یادآوری", {
       body: body || "",
-      icon: icon || "./icons/icon-192.png",
-      badge: "./icons/icon-192.png",
+      icon: icon || "./icons/bn-icon-192.png",
+      badge: "./icons/bn-icon-192.png",
       tag: tag || "reminder",
       dir: "rtl",
       lang: "fa",

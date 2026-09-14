@@ -1,8 +1,10 @@
 {
+  "id": "/barnameh-negar/",
   "name": "برنامه نگار",
   "short_name": "برنامه نگار",
-  "description": "تقویم شمسی، قمری و میلادی با یادداشت، یادآوری، پیوست و برنامه‌ریزی روزانه",
-  "start_url": "./index.html",
+  "description": "برنامه نگار — تقویم شمسی، قمری و میلادی با یادداشت، یادآوری و برنامه‌ریزی",
+  "start_url": "./index.html?app=barnameh-negar",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f172a",
@@ -11,25 +13,25 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "icons/bn-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/bn-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-192.png",
+      "src": "icons/bn-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/bn-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
