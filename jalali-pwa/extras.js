@@ -1,5 +1,5 @@
 /**
- * Extras: templates, copy day, pins, countdown, focus mode,
+ * Extras: templates, copy day, pins, countdown,
  * attachment backup, trash, PIN lock, monthly report, day colors, year view,
  * shift visibility
  */
@@ -10,7 +10,6 @@ const COUNTDOWN_KEY = "calendarCountdowns";
 const TRASH_KEY = "calendarTrash";
 const PIN_LOCK_KEY = "calendarPinLock";
 const SHIFT_VIS_KEY = "calendarShiftVisible";
-const FOCUS_KEY = "calendarFocusMode";
 const TRASH_MAX_DAYS = 14;
 
 // ---------- storage helpers ----------
@@ -167,19 +166,6 @@ function isPinEnabled() {
   return !!getPinHash();
 }
 
-// ---------- Focus mode ----------
-function isFocusMode() {
-  return localStorage.getItem(FOCUS_KEY) === "1";
-}
-function setFocusMode(on) {
-  localStorage.setItem(FOCUS_KEY, on ? "1" : "0");
-  applyFocusMode();
-}
-function applyFocusMode() {
-  document.body.classList.toggle("focus-mode", isFocusMode());
-  const btn = document.getElementById("focus-toggle-btn");
-  if (btn) btn.classList.toggle("active", isFocusMode());
-}
 
 // ---------- Templates ----------
 const NOTE_TEMPLATES = [
@@ -276,7 +262,10 @@ async function exportAttachmentsBackup() {
   });
   const out = [];
   for (const r of rows) {
-    const buf = await r.blob.arrayBuffer();
+    let buf;
+    if (r.data != null) buf = r.data;
+    else if (r.blob instanceof Blob) buf = await r.blob.arrayBuffer();
+    else continue;
     const bytes = new Uint8Array(buf);
     let binary = "";
     const chunk = 0x8000;
@@ -326,9 +315,9 @@ async function importAttachmentsBackup(file) {
       dayKey: f.dayKey,
       name: f.name,
       mime: f.mime,
-      size: f.size,
+      size: f.size || bytes.byteLength,
       kind: f.kind,
-      blob: new Blob([bytes], { type: f.mime || "application/octet-stream" }),
+      data: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
       createdAt: f.createdAt || Date.now(),
       updatedAt: f.updatedAt || Date.now()
     };
@@ -455,7 +444,6 @@ function switchExtrasTab(tab) {
   }
   if (tab === "more") {
     document.getElementById("shift-visible-toggle").checked = isShiftVisible();
-    document.getElementById("focus-mode-toggle").checked = isFocusMode();
   }
 }
 
@@ -545,17 +533,12 @@ function renderCountdownFormList() {
 
 function setupExtras() {
   applyShiftVisibility();
-  applyFocusMode();
   renderCountdownStrip();
   purgeOldTrash();
 
   document.getElementById("open-extras-btn")?.addEventListener("click", () =>
     openExtrasModal("templates")
   );
-  document.getElementById("focus-toggle-btn")?.addEventListener("click", () => {
-    setFocusMode(!isFocusMode());
-    showToast(isFocusMode() ? "حالت تمرکز فعال شد" : "حالت تمرکز خاموش شد");
-  });
   document.getElementById("extras-close-x")?.addEventListener("click", closeExtrasModal);
   document.getElementById("extras-close-btn")?.addEventListener("click", closeExtrasModal);
   document.getElementById("extras-backdrop")?.addEventListener("click", closeExtrasModal);
@@ -722,9 +705,6 @@ function setupExtras() {
   document.getElementById("shift-visible-toggle")?.addEventListener("change", (e) => {
     setShiftVisible(e.target.checked);
     showToast(e.target.checked ? "نمایش شیفت روشن" : "نمایش شیفت خاموش");
-  });
-  document.getElementById("focus-mode-toggle")?.addEventListener("change", (e) => {
-    setFocusMode(e.target.checked);
   });
 
   // unlock gate

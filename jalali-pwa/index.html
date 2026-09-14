@@ -26,6 +26,7 @@
       </div>
     </div>
     <div id="dashboard-strip" class="dashboard-strip" aria-label="خلاصه امروز"></div>
+    <div id="countdown-strip" class="countdown-strip hidden" aria-label="شمارش معکوس"></div>
     <header class="today-header">
       <div class="header-top-row">
         <div class="weekday" id="weekday">—</div>
@@ -39,6 +40,17 @@
             <span class="date-label">شمسی</span>
             <button id="note-btn" class="note-btn" aria-label="یادداشت" title="یادداشت">📝</button>
             <button id="attach-btn" class="attach-btn" aria-label="پیوست" title="پیوست فایل">📎</button>
+            <button id="pin-day-btn" class="pin-day-btn" aria-label="ستاره" title="ستاره‌دار کردن روز">⭐</button>
+            <select id="day-color-select" class="day-color-select" title="رنگ روز" aria-label="رنگ روز">
+              <option value="none">رنگ</option>
+              <option value="red">قرمز</option>
+              <option value="orange">نارنجی</option>
+              <option value="yellow">زرد</option>
+              <option value="green">سبز</option>
+              <option value="blue">آبی</option>
+              <option value="purple">بنفش</option>
+              <option value="pink">صورتی</option>
+            </select>
             <button id="reminder-btn" class="reminder-btn" aria-label="یادآوری" title="یادآوری / آلارم">🔔</button>
           </div>
           <span class="date-value" id="jalali-date">—</span>
@@ -82,6 +94,7 @@
         <button id="open-search-btn" class="backup-btn" title="جستجو">🔎 جستجو</button>
         <button id="open-week-btn" class="backup-btn" title="هفت روز آینده">📅 هفته</button>
         <button id="open-tools-btn" class="backup-btn" title="ابزارها">🛠 ابزارها</button>
+        <button id="open-extras-btn" class="backup-btn" title="امکانات بیشتر">✨ بیشتر</button>
         <button id="manage-reminders-btn" class="backup-btn" title="مدیریت اعلان‌ها">🔔 اعلان‌ها</button>
         <button id="backup-btn" class="backup-btn" title="پشتیبان‌گیری">⬇️ پشتیبان</button>
         <button id="restore-btn" class="backup-btn" title="بازیابی">⬆️ بازیابی</button>
@@ -406,8 +419,9 @@
       <div class="modal-body">
         <p class="note-date-label" id="att-date-label">—</p>
         <p class="modal-desc">می‌توانید تصویر، صدا، ویدئو، متن یا هر فایل دیگری را به این روز پیوست کنید (حداکثر ۲۵ مگابایت برای هر فایل).</p>
-        <input type="file" id="att-file-input" multiple hidden />
-        <button type="button" id="att-add-btn" class="primary-btn">➕ افزودن فایل</button>
+        <input type="file" id="att-file-input" class="att-file-input-native" multiple />
+        <label for="att-file-input" id="att-add-label" class="primary-btn att-add-label">➕ انتخاب فایل از حافظه</label>
+        <p class="modal-desc att-hint">فایل را از حافظه، گالری یا Downloads انتخاب کنید. نیازی به دسترسی میکروفون نیست.</p>
         <div id="att-list" class="att-list"></div>
         <div id="att-preview" class="att-preview hidden"></div>
         <div id="att-text-editor" class="att-text-editor hidden">
@@ -426,12 +440,108 @@
     </div>
   </div>
 
+
+  <!-- PIN gate -->
+  <div id="pin-gate" class="pin-gate hidden">
+    <div class="pin-gate-card">
+      <h2>🔒 ورود به تقویم</h2>
+      <p>کد PIN را وارد کنید</p>
+      <input type="password" id="pin-unlock-input" class="form-input" inputmode="numeric" maxlength="8" placeholder="PIN" />
+      <button type="button" id="pin-unlock-btn" class="primary-btn">ورود</button>
+    </div>
+  </div>
+
+  <!-- Extras modal -->
+  <div id="extras-modal" class="modal hidden">
+    <div class="modal-backdrop" id="extras-backdrop"></div>
+    <div class="modal-content feature-modal-content">
+      <div class="modal-header">
+        <h2>امکانات بیشتر</h2>
+        <button id="extras-close-x" class="close-btn">×</button>
+      </div>
+      <div class="feature-tabs">
+        <button type="button" class="feature-tab active" id="extab-templates">قالب</button>
+        <button type="button" class="feature-tab" id="extab-copy">کپی روز</button>
+        <button type="button" class="feature-tab" id="extab-countdown">شمارش</button>
+        <button type="button" class="feature-tab" id="extab-trash">سطل</button>
+        <button type="button" class="feature-tab" id="extab-report">گزارش</button>
+        <button type="button" class="feature-tab" id="extab-year">سال</button>
+        <button type="button" class="feature-tab" id="extab-security">امنیت</button>
+        <button type="button" class="feature-tab" id="extab-more">بیشتر</button>
+      </div>
+      <div class="modal-body">
+        <div id="exp-templates">
+          <p class="modal-desc">افزودن قالب یادداشت به روز انتخاب‌شده</p>
+          <div class="tpl-row">
+            <button type="button" class="tpl-btn" data-tpl="meeting">جلسه</button>
+            <button type="button" class="tpl-btn" data-tpl="medicine">دارو</button>
+            <button type="button" class="tpl-btn" data-tpl="call">تماس</button>
+            <button type="button" class="tpl-btn" data-tpl="task">کار</button>
+          </div>
+        </div>
+        <div id="exp-copy" class="hidden">
+          <p class="modal-desc">کپی یادداشت/یادآوری/رنگ/ستاره از روز جاری. مقصد: شماره روز شمسی همین ماه (مثلاً ۱۵,۲۰) یا نسبی (+1,-2)</p>
+          <label class="a11y-row"><span>یادداشت</span><input type="checkbox" id="copy-note" checked /></label>
+          <label class="a11y-row"><span>یادآوری</span><input type="checkbox" id="copy-rem" checked /></label>
+          <label class="a11y-row"><span>رنگ</span><input type="checkbox" id="copy-color" checked /></label>
+          <label class="a11y-row"><span>ستاره</span><input type="checkbox" id="copy-pin" checked /></label>
+          <input id="copy-target-days" class="form-input" placeholder="مثلاً 18,20 یا +1,+2" />
+          <button type="button" id="copy-day-btn" class="primary-btn">اجرای کپی</button>
+        </div>
+        <div id="exp-countdown" class="hidden">
+          <p class="modal-desc">شمارش معکوس تا یک تاریخ شمسی</p>
+          <input id="cd-title" class="form-input" placeholder="عنوان رویداد" />
+          <div class="occ-date-row">
+            <input id="cd-jd" class="form-input" inputmode="numeric" placeholder="روز" />
+            <input id="cd-jm" class="form-input" inputmode="numeric" placeholder="ماه" />
+            <input id="cd-jy" class="form-input" inputmode="numeric" placeholder="سال" />
+          </div>
+          <button type="button" id="cd-add-btn" class="primary-btn">افزودن</button>
+          <div id="countdown-manage-list"></div>
+        </div>
+        <div id="exp-trash" class="hidden">
+          <p class="modal-desc">موارد حذف‌شده تا ۱۴ روز قابل بازگردانی هستند</p>
+          <div id="trash-list"></div>
+        </div>
+        <div id="exp-report" class="hidden">
+          <div id="report-body"></div>
+        </div>
+        <div id="exp-year" class="hidden">
+          <div class="year-nav">
+            <button type="button" id="year-prev-btn" class="nav-btn">‹</button>
+            <strong id="year-view-label">—</strong>
+            <button type="button" id="year-next-btn" class="nav-btn">›</button>
+          </div>
+          <div id="year-view-body"></div>
+        </div>
+        <div id="exp-security" class="hidden">
+          <p id="pin-status" class="modal-desc">—</p>
+          <input id="pin-input" class="form-input" type="password" inputmode="numeric" maxlength="8" placeholder="PIN جدید (۴ تا ۸ رقم)" />
+          <input id="pin-input2" class="form-input" type="password" inputmode="numeric" maxlength="8" placeholder="تکرار PIN" />
+          <button type="button" id="pin-save-btn" class="primary-btn">فعال‌سازی PIN</button>
+          <button type="button" id="pin-clear-btn" class="danger-btn">حذف PIN</button>
+        </div>
+        <div id="exp-more" class="hidden">
+          <label class="a11y-row"><span>نمایش اطلاعات شیفت</span><input type="checkbox" id="shift-visible-toggle" checked /></label>
+          <p class="modal-desc">پشتیبان پیوست‌ها (جدا از بکاپ متنی)</p>
+          <button type="button" id="att-backup-btn" class="backup-btn">⬇️ پشتیبان پیوست‌ها</button>
+          <button type="button" id="att-restore-btn" class="backup-btn">⬆️ بازیابی پیوست‌ها</button>
+          <input type="file" id="att-restore-file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="extras-close-btn" class="secondary-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
   <script src="sounds.js"></script>
   <script src="jalali.js"></script>
   <script src="holidays.js"></script>
   <script src="reminders.js"></script>
   <script src="features.js"></script>
   <script src="attachments.js"></script>
+  <script src="extras.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

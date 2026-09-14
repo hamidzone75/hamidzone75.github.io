@@ -138,6 +138,7 @@ function init() {
   // Extra features (search, week, a11y, stats, dashboard, backup reminder)
   if (typeof setupFeatures === "function") setupFeatures();
   if (typeof setupAttachments === "function") setupAttachments();
+  if (typeof setupExtras === "function") setupExtras();
 
   // Startup day summary (notes + reminders)
   setTimeout(maybeShowStartupDaySummary, 400);
@@ -254,6 +255,10 @@ function updateHeader(holidayTitle) {
       if (ab) ab.classList.toggle("has-attach", has);
     }).catch(() => {});
   }
+  const colorSel = document.getElementById("day-color-select");
+  if (colorSel && typeof getDayColor === "function") {
+    colorSel.value = getDayColor(gy, gm, gd) || "none";
+  }
 }
 
 // ===================== Calendar =====================
@@ -308,6 +313,9 @@ function renderCalendar() {
         cell.dataset.gy = gy;
         cell.dataset.gm = gm;
         cell.dataset.gd = gd;
+        if (typeof decorateExtraCellMarkers === "function") {
+          decorateExtraCellMarkers(cell, gy, gm, gd);
+        }
         if (selectedDate && selectedDate.gy === gy && selectedDate.gm === gm && selectedDate.gd === gd)
           cell.classList.add("selected");
 
@@ -746,17 +754,18 @@ function saveNoteFromDialog() {
   showToast(text.trim() ? "یادداشت ذخیره شد" : "یادداشت حذف شد");
 }
 async function deleteNoteFromDialog() {
-  const ok = await showConfirm(
-    "آیا از حذف این یادداشت مطمئن هستید؟ این عمل قابل بازگشت نیست.",
-    "حذف یادداشت"
-  );
-  if (!ok) return;
   const { gy, gm, gd } = getCurrentSelectedGregorian();
-  setNote(gy, gm, gd, "");
+  const ok = await showConfirm("یادداشت این روز حذف شود؟ (قابل بازگردانی از سطل زباله)", "حذف یادداشت");
+  if (!ok) return;
+  if (typeof extrasSoftDeleteNoteHook === "function") {
+    extrasSoftDeleteNoteHook(gy, gm, gd);
+  } else {
+    setNote(gy, gm, gd, "");
+  }
   closeNoteDialog();
   updateHeader();
   renderCalendar();
-  showToast("یادداشت حذف شد");
+  showToast("یادداشت به سطل زباله منتقل شد");
 }
 
 // ===================== Reminders UI =====================
