@@ -1697,8 +1697,8 @@ body.focus-mode .dashboard-strip {
 }
 
 
-/* File input must not use display:none / hidden on some Android WebViews */
-.att-file-input-visually-hidden {
+/* Native file input: screen-reader only, opened via associated label */
+.att-file-input-native {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1709,7 +1709,14 @@ body.focus-mode .dashboard-strip {
   white-space: nowrap;
   border: 0;
   opacity: 0;
-  pointer-events: none;
+}
+.att-add-label {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-top: 4px;
+  text-align: center;
 }
 .att-hint {
   margin-top: 8px;

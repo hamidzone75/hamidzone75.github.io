@@ -1,5 +1,6 @@
 /**
- * Day attachments via IndexedDB (ArrayBuffer storage for mobile reliability)
+ * Day file attachments — IndexedDB (ArrayBuffer)
+ * Reliable file picker via <label for="..."> (no capture, no mic)
  */
 
 const ATT_DB_NAME = "calendarAttachmentsDB";
@@ -8,35 +9,32 @@ const ATT_STORE = "files";
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
 let attDbPromise = null;
+let attContext = null;
+let attObjectUrls = [];
 
 function openAttDb() {
   if (attDbPromise) return attDbPromise;
-  attDbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(ATT_DB_NAME, ATT_DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
+  attDbPromise = new Promise(function (resolve, reject) {
+    var req = indexedDB.open(ATT_DB_NAME, ATT_DB_VERSION);
+    req.onupgradeneeded = function () {
+      var db = req.result;
       if (!db.objectStoreNames.contains(ATT_STORE)) {
-        const store = db.createObjectStore(ATT_STORE, { keyPath: "id" });
+        var store = db.createObjectStore(ATT_STORE, { keyPath: "id" });
         store.createIndex("dayKey", "dayKey", { unique: false });
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => {
-      attDbPromise = null;
-      reject(req.error || new Error("IndexedDB open failed"));
+    req.onsuccess = function () {
+      resolve(req.result);
+    };
+    req.onerror = function () {
+      reject(req.error);
     };
   });
   return attDbPromise;
 }
 
 function dayKeyFromParts(gy, gm, gd) {
-  return (
-    String(gy) +
-    "-" +
-    String(gm).padStart(2, "0") +
-    "-" +
-    String(gd).padStart(2, "0")
-  );
+  return gy + "-" + String(gm).padStart(2, "0") + "-" + String(gd).padStart(2, "0");
 }
 
 function newAttId() {
@@ -44,12 +42,12 @@ function newAttId() {
 }
 
 function guessKind(mime, name) {
-  const m = (mime || "").toLowerCase();
-  const n = (name || "").toLowerCase();
-  if (m.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(n)) return "image";
-  if (m.startsWith("audio/") || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(n)) return "audio";
-  if (m.startsWith("video/") || /\.(mp4|webm|mov|mkv|avi)$/i.test(n)) return "video";
-  if (m.startsWith("text/") || /\.(txt|md|csv|json|log|html?|css|js)$/i.test(n)) return "text";
+  var m = (mime || "").toLowerCase();
+  var n = (name || "").toLowerCase();
+  if (m.indexOf("image/") === 0 || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(n)) return "image";
+  if (m.indexOf("audio/") === 0 || /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(n)) return "audio";
+  if (m.indexOf("video/") === 0 || /\.(mp4|webm|mov|mkv|avi)$/i.test(n)) return "video";
+  if (m.indexOf("text/") === 0 || /\.(txt|md|csv|json|log|html?|css|js)$/i.test(n)) return "text";
   return "file";
 }
 
@@ -60,111 +58,6 @@ function recordToBlob(rec) {
     return new Blob([rec.data], { type: rec.mime || "application/octet-stream" });
   }
   return null;
-}
-
-async function listAttachments(gy, gm, gd) {
-  const db = await openAttDb();
-  const dayKey = dayKeyFromParts(gy, gm, gd);
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction(ATT_STORE, "readonly");
-      const idx = tx.objectStore(ATT_STORE).index("dayKey");
-      const req = idx.getAll(dayKey);
-      req.onsuccess = () => {
-        const rows = (req.result || []).map((r) => ({
-          id: r.id,
-          dayKey: r.dayKey,
-          name: r.name,
-          mime: r.mime,
-          size: r.size,
-          kind: r.kind || guessKind(r.mime, r.name),
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt
-        }));
-        rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        resolve(rows);
-      };
-      req.onerror = () => reject(req.error);
-    } catch (e) {
-      reject(e);
-    }
-  });
-}
-
-async function hasAttachments(gy, gm, gd) {
-  try {
-    const list = await listAttachments(gy, gm, gd);
-    return list.length > 0;
-  } catch (_) {
-    return false;
-  }
-}
-
-async function getAttachment(id) {
-  const db = await openAttDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(ATT_STORE, "readonly");
-    const req = tx.objectStore(ATT_STORE).get(id);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function saveAttachmentRecord(rec) {
-  const db = await openAttDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(ATT_STORE, "readwrite");
-    const store = tx.objectStore(ATT_STORE);
-    const req = store.put(rec);
-    req.onsuccess = () => resolve(rec);
-    req.onerror = () => reject(req.error || new Error("put failed"));
-    tx.onerror = () => reject(tx.error || new Error("tx failed"));
-  });
-}
-
-async function deleteAttachment(id) {
-  const db = await openAttDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(ATT_STORE, "readwrite");
-    const req = tx.objectStore(ATT_STORE).delete(id);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function addFilesToDay(gy, gm, gd, fileList) {
-  const dayKey = dayKeyFromParts(gy, gm, gd);
-  const files = Array.from(fileList || []);
-  if (!files.length) return [];
-  const saved = [];
-  for (const file of files) {
-    if (file.size > MAX_FILE_BYTES) {
-      throw new Error("FILE_TOO_LARGE:" + (file.name || ""));
-    }
-    const buf = await file.arrayBuffer();
-    const rec = {
-      id: newAttId(),
-      dayKey: dayKey,
-      name: file.name || "file",
-      mime: file.type || "application/octet-stream",
-      size: file.size,
-      kind: guessKind(file.type, file.name),
-      // ArrayBuffer is more reliable than Blob across mobile browsers
-      data: buf,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-    await saveAttachmentRecord(rec);
-    saved.push({
-      id: rec.id,
-      dayKey: rec.dayKey,
-      name: rec.name,
-      mime: rec.mime,
-      size: rec.size,
-      kind: rec.kind
-    });
-  }
-  return saved;
 }
 
 function formatBytes(n) {
@@ -191,12 +84,133 @@ function safeEscape(str) {
     .replace(/"/g, "&quot;");
 }
 
-// ---- UI ----
-let attContext = null;
-let attObjectUrls = [];
+async function listAttachments(gy, gm, gd) {
+  var db = await openAttDb();
+  var dayKey = dayKeyFromParts(gy, gm, gd);
+  return new Promise(function (resolve, reject) {
+    try {
+      var tx = db.transaction(ATT_STORE, "readonly");
+      var idx = tx.objectStore(ATT_STORE).index("dayKey");
+      var req = idx.getAll(dayKey);
+      req.onsuccess = function () {
+        var rows = (req.result || []).map(function (r) {
+          return {
+            id: r.id,
+            dayKey: r.dayKey,
+            name: r.name,
+            mime: r.mime,
+            size: r.size,
+            kind: r.kind || guessKind(r.mime, r.name),
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt
+          };
+        });
+        rows.sort(function (a, b) {
+          return (b.createdAt || 0) - (a.createdAt || 0);
+        });
+        resolve(rows);
+      };
+      req.onerror = function () {
+        reject(req.error);
+      };
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+async function hasAttachments(gy, gm, gd) {
+  try {
+    var list = await listAttachments(gy, gm, gd);
+    return list.length > 0;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function getAttachment(id) {
+  var db = await openAttDb();
+  return new Promise(function (resolve, reject) {
+    var tx = db.transaction(ATT_STORE, "readonly");
+    var req = tx.objectStore(ATT_STORE).get(id);
+    req.onsuccess = function () {
+      resolve(req.result || null);
+    };
+    req.onerror = function () {
+      reject(req.error);
+    };
+  });
+}
+
+async function saveAttachmentRecord(rec) {
+  var db = await openAttDb();
+  return new Promise(function (resolve, reject) {
+    var tx = db.transaction(ATT_STORE, "readwrite");
+    var store = tx.objectStore(ATT_STORE);
+    var req = store.put(rec);
+    req.onsuccess = function () {
+      resolve(rec);
+    };
+    req.onerror = function () {
+      reject(req.error || new Error("put failed"));
+    };
+    tx.onerror = function () {
+      reject(tx.error || new Error("tx failed"));
+    };
+  });
+}
+
+async function deleteAttachment(id) {
+  var db = await openAttDb();
+  return new Promise(function (resolve, reject) {
+    var tx = db.transaction(ATT_STORE, "readwrite");
+    var req = tx.objectStore(ATT_STORE).delete(id);
+    req.onsuccess = function () {
+      resolve();
+    };
+    req.onerror = function () {
+      reject(req.error);
+    };
+  });
+}
+
+async function addFilesToDay(gy, gm, gd, fileList) {
+  var dayKey = dayKeyFromParts(gy, gm, gd);
+  var files = Array.from(fileList || []);
+  if (!files.length) return [];
+  var saved = [];
+  for (var i = 0; i < files.length; i++) {
+    var file = files[i];
+    if (file.size > MAX_FILE_BYTES) {
+      throw new Error("FILE_TOO_LARGE:" + (file.name || ""));
+    }
+    var buf = await file.arrayBuffer();
+    var rec = {
+      id: newAttId(),
+      dayKey: dayKey,
+      name: file.name || "file",
+      mime: file.type || "application/octet-stream",
+      size: file.size,
+      kind: guessKind(file.type, file.name),
+      data: buf,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    await saveAttachmentRecord(rec);
+    saved.push({
+      id: rec.id,
+      dayKey: rec.dayKey,
+      name: rec.name,
+      mime: rec.mime,
+      size: rec.size,
+      kind: rec.kind
+    });
+  }
+  return saved;
+}
 
 function revokeAttUrls() {
-  attObjectUrls.forEach((u) => {
+  attObjectUrls.forEach(function (u) {
     try {
       URL.revokeObjectURL(u);
     } catch (_) {}
@@ -206,7 +220,7 @@ function revokeAttUrls() {
 
 async function openAttachmentsDialog() {
   try {
-    const sel = getCurrentSelectedGregorian();
+    var sel = getCurrentSelectedGregorian();
     attContext = { gy: sel.gy, gm: sel.gm, gd: sel.gd };
   } catch (e) {
     console.error(e);
@@ -215,7 +229,7 @@ async function openAttachmentsDialog() {
   }
 
   try {
-    const info = getAllDatesFor(attContext.gy, attContext.gm, attContext.gd);
+    var info = getAllDatesFor(attContext.gy, attContext.gm, attContext.gd);
     document.getElementById("att-date-label").textContent =
       info.jalali.weekday + " — " + formatJalali(info);
   } catch (_) {
@@ -227,8 +241,8 @@ async function openAttachmentsDialog() {
   }
 
   document.getElementById("attachments-modal").classList.remove("hidden");
-  const preview = document.getElementById("att-preview");
-  const editor = document.getElementById("att-text-editor");
+  var preview = document.getElementById("att-preview");
+  var editor = document.getElementById("att-text-editor");
   if (preview) {
     preview.classList.add("hidden");
     preview.innerHTML = "";
@@ -246,18 +260,22 @@ function closeAttachmentsDialog() {
 }
 
 async function renderAttachmentsList() {
-  const box = document.getElementById("att-list");
+  var box = document.getElementById("att-list");
   if (!box || !attContext) return;
   box.innerHTML = '<p class="day-summary-empty">در حال بارگذاری…</p>';
   try {
-    const list = await listAttachments(attContext.gy, attContext.gm, attContext.gd);
+    var list = await listAttachments(attContext.gy, attContext.gm, attContext.gd);
     if (!list.length) {
       box.innerHTML =
-        '<p class="day-summary-empty">پیوستی برای این روز ثبت نشده است. با دکمه «افزودن فایل» یک فایل انتخاب کنید.</p>';
+        '<p class="day-summary-empty">پیوستی برای این روز نیست. از دکمه زیر یک فایل از حافظه انتخاب کنید.</p>';
       return;
     }
     box.innerHTML = list
-      .map((a) => {
+      .map(function (a) {
+        var editBtn =
+          a.kind === "text"
+            ? '<button type="button" class="backup-btn att-edit" data-id="' + a.id + '">ویرایش</button>'
+            : "";
         return (
           '<div class="att-item" data-id="' +
           a.id +
@@ -268,8 +286,7 @@ async function renderAttachmentsList() {
           "</span>" +
           '<div class="att-meta"><strong>' +
           safeEscape(a.name) +
-          "</strong>" +
-          "<span>" +
+          "</strong><span>" +
           safeEscape(a.mime || "file") +
           " · " +
           formatBytes(a.size || 0) +
@@ -278,11 +295,7 @@ async function renderAttachmentsList() {
           '<button type="button" class="backup-btn att-open" data-id="' +
           a.id +
           '">باز کردن</button>' +
-          (a.kind === "text"
-            ? '<button type="button" class="backup-btn att-edit" data-id="' +
-              a.id +
-              '">ویرایش</button>'
-            : "") +
+          editBtn +
           '<button type="button" class="manage-del-btn att-del" data-id="' +
           a.id +
           '">حذف</button>' +
@@ -291,140 +304,97 @@ async function renderAttachmentsList() {
       })
       .join("");
 
-    box.querySelectorAll(".att-open").forEach((btn) => {
-      btn.addEventListener("click", () => openAttachmentById(btn.dataset.id));
+    box.querySelectorAll(".att-open").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        openAttachmentById(btn.dataset.id);
+      });
     });
-    box.querySelectorAll(".att-edit").forEach((btn) => {
-      btn.addEventListener("click", () => editTextAttachment(btn.dataset.id));
+    box.querySelectorAll(".att-edit").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        editTextAttachment(btn.dataset.id);
+      });
     });
-    box.querySelectorAll(".att-del").forEach((btn) => {
-      btn.addEventListener("click", () => removeAttachmentById(btn.dataset.id));
+    box.querySelectorAll(".att-del").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        removeAttachmentById(btn.dataset.id);
+      });
     });
   } catch (e) {
     console.error(e);
-    box.innerHTML =
-      '<p class="day-summary-empty">خطا در خواندن پیوست‌ها. فضای ذخیره‌سازی مرورگر را بررسی کنید.</p>';
+    box.innerHTML = '<p class="day-summary-empty">خطا در خواندن پیوست‌ها</p>';
   }
 }
 
 async function openAttachmentById(id) {
-  const rec = await getAttachment(id);
+  var rec = await getAttachment(id);
   if (!rec) {
     showToast("فایل پیدا نشد", "error");
     return;
   }
-  const blob = recordToBlob(rec);
+  var preview = document.getElementById("att-preview");
+  var editor = document.getElementById("att-text-editor");
+  if (editor) editor.classList.add("hidden");
+  if (!preview) return;
+  revokeAttUrls();
+  var blob = recordToBlob(rec);
   if (!blob) {
-    showToast("داده فایل ناقص است", "error");
+    showToast("محتوای فایل قابل خواندن نیست", "error");
     return;
   }
-  const preview = document.getElementById("att-preview");
-  const editor = document.getElementById("att-text-editor");
-  if (editor) editor.classList.add("hidden");
-  revokeAttUrls();
-  const url = URL.createObjectURL(blob);
+  var url = URL.createObjectURL(blob);
   attObjectUrls.push(url);
-  const kind = rec.kind || guessKind(rec.mime, rec.name);
-  const name = safeEscape(rec.name || "file");
+  var kind = rec.kind || guessKind(rec.mime, rec.name);
+  var dl =
+    '<a class="primary-btn att-download" href="' +
+    url +
+    '" download="' +
+    safeEscape(rec.name) +
+    '">دانلود</a>';
 
-  if (!preview) return;
   preview.classList.remove("hidden");
-
   if (kind === "image") {
     preview.innerHTML =
-      '<img class="att-preview-media" src="' +
-      url +
-      '" alt="' +
-      name +
-      '" />' +
-      '<a class="primary-btn att-download" href="' +
-      url +
-      '" download="' +
-      name +
-      '">دانلود</a>';
+      '<img class="att-preview-media" src="' + url + '" alt="' + safeEscape(rec.name) + '" />' + dl;
   } else if (kind === "audio") {
-    preview.innerHTML =
-      '<audio class="att-preview-media" controls src="' +
-      url +
-      '"></audio>' +
-      '<a class="primary-btn att-download" href="' +
-      url +
-      '" download="' +
-      name +
-      '">دانلود</a>';
+    preview.innerHTML = '<audio class="att-preview-media" controls src="' + url + '"></audio>' + dl;
   } else if (kind === "video") {
-    preview.innerHTML =
-      '<video class="att-preview-media" controls src="' +
-      url +
-      '"></video>' +
-      '<a class="primary-btn att-download" href="' +
-      url +
-      '" download="' +
-      name +
-      '">دانلود</a>';
+    preview.innerHTML = '<video class="att-preview-media" controls src="' + url + '"></video>' + dl;
   } else if (kind === "text") {
-    const text = await blob.text();
-    preview.innerHTML =
-      '<pre class="att-text-view">' +
-      safeEscape(text) +
-      "</pre>" +
-      '<a class="primary-btn att-download" href="' +
-      url +
-      '" download="' +
-      name +
-      '">دانلود</a>';
+    var text = await blob.text();
+    preview.innerHTML = '<pre class="att-text-view">' + safeEscape(text) + "</pre>" + dl;
   } else {
     preview.innerHTML =
-      '<p class="modal-desc">پیش‌نمایش برای این نوع در دسترس نیست. می‌توانید دانلود کنید.</p>' +
-      '<a class="primary-btn att-download" href="' +
-      url +
-      '" download="' +
-      name +
-      '">دانلود / باز کردن</a>';
+      '<p class="modal-desc">پیش‌نمایش این نوع فایل در دسترس نیست. می‌توانید دانلود کنید.</p>' + dl;
   }
 }
 
 async function editTextAttachment(id) {
-  const rec = await getAttachment(id);
-  if (!rec) {
-    showToast("فایل پیدا نشد", "error");
-    return;
-  }
-  const blob = recordToBlob(rec);
-  if (!blob) {
-    showToast("داده فایل ناقص است", "error");
-    return;
-  }
-  const kind = rec.kind || guessKind(rec.mime, rec.name);
-  if (kind !== "text") {
+  var rec = await getAttachment(id);
+  if (!rec || (rec.kind !== "text" && guessKind(rec.mime, rec.name) !== "text")) {
     showToast("فقط فایل متنی قابل ویرایش است", "error");
     return;
   }
-  const text = await blob.text();
-  document.getElementById("att-preview")?.classList.add("hidden");
-  const editor = document.getElementById("att-text-editor");
-  if (!editor) return;
+  var blob = recordToBlob(rec);
+  var text = await blob.text();
+  document.getElementById("att-preview").classList.add("hidden");
+  var editor = document.getElementById("att-text-editor");
   editor.classList.remove("hidden");
   document.getElementById("att-text-area").value = text;
   editor.dataset.editId = id;
 }
 
 async function saveTextAttachmentEdit() {
-  const editor = document.getElementById("att-text-editor");
-  const id = editor && editor.dataset.editId;
+  var editor = document.getElementById("att-text-editor");
+  var id = editor.dataset.editId;
   if (!id) return;
-  const rec = await getAttachment(id);
+  var rec = await getAttachment(id);
   if (!rec) return;
-  const text = document.getElementById("att-text-area").value;
-  const enc = new TextEncoder().encode(text);
-  // copy to ArrayBuffer
-  const buf = enc.buffer.slice(enc.byteOffset, enc.byteOffset + enc.byteLength);
-  rec.data = buf;
-  delete rec.blob;
-  rec.size = enc.byteLength;
-  rec.mime = rec.mime || "text/plain";
-  rec.kind = "text";
+  var text = document.getElementById("att-text-area").value;
+  var buf = new TextEncoder().encode(text);
+  rec.data = buf.buffer;
+  rec.size = buf.byteLength;
   rec.updatedAt = Date.now();
+  delete rec.blob;
   await saveAttachmentRecord(rec);
   editor.classList.add("hidden");
   showToast("متن ذخیره شد");
@@ -434,11 +404,14 @@ async function saveTextAttachmentEdit() {
 }
 
 async function removeAttachmentById(id) {
-  const ok = await showConfirm("این پیوست برای همیشه حذف شود؟", "حذف پیوست");
+  var ok = true;
+  if (typeof showConfirm === "function") {
+    ok = await showConfirm("این پیوست حذف شود؟", "حذف پیوست");
+  }
   if (!ok) return;
   await deleteAttachment(id);
-  document.getElementById("att-preview")?.classList.add("hidden");
-  document.getElementById("att-text-editor")?.classList.add("hidden");
+  document.getElementById("att-preview").classList.add("hidden");
+  document.getElementById("att-text-editor").classList.add("hidden");
   showToast("پیوست حذف شد");
   await renderAttachmentsList();
   refreshAttachmentIndicators();
@@ -454,106 +427,63 @@ async function handleSelectedFiles(files) {
     return;
   }
   try {
-    const saved = await addFilesToDay(
-      attContext.gy,
-      attContext.gm,
-      attContext.gd,
-      files
-    );
+    var saved = await addFilesToDay(attContext.gy, attContext.gm, attContext.gd, files);
     showToast(
-      (typeof toPersianDigits === "function"
-        ? toPersianDigits(saved.length)
-        : saved.length) + " فایل پیوست شد"
+      (typeof toPersianDigits === "function" ? toPersianDigits(saved.length) : saved.length) +
+        " فایل پیوست شد"
     );
     await renderAttachmentsList();
     refreshAttachmentIndicators();
   } catch (err) {
     console.error(err);
-    if (String(err && err.message).startsWith("FILE_TOO_LARGE")) {
+    if (String(err && err.message).indexOf("FILE_TOO_LARGE") === 0) {
       showToast("حجم فایل بیش از ۲۵ مگابایت است", "error");
     } else {
-      showToast("خطا در ذخیره پیوست — اجازه ذخیره‌سازی را بررسی کنید", "error");
+      showToast("خطا در ذخیره پیوست", "error");
     }
   }
 }
 
-async function onAttFilesSelected(e) {
-  const files = e.target.files;
-  // reset so same file can be picked again
-  const input = e.target;
-  const list = files ? Array.from(files) : [];
-  input.value = "";
-  await handleSelectedFiles(list);
-}
-
-/** Prefer File System Access API when available (no mic/camera shortcuts) */
-async function pickFilesModern() {
-  if (typeof window.showOpenFilePicker === "function") {
-    try {
-      const handles = await window.showOpenFilePicker({
-        multiple: true,
-        excludeAcceptAllOption: false
-      });
-      const files = [];
-      for (const h of handles) {
-        files.push(await h.getFile());
-      }
-      return files;
-    } catch (e) {
-      // user cancelled or not allowed — fall through
-      if (e && e.name === "AbortError") return null;
-      console.warn("showOpenFilePicker failed, fallback to input", e);
-    }
-  }
-  return undefined; // signal fallback
-}
-
-async function onAddAttachmentClick(e) {
-  if (e) e.preventDefault();
-  const modern = await pickFilesModern();
-  if (modern === null) return; // cancelled
-  if (Array.isArray(modern)) {
-    await handleSelectedFiles(modern);
-    return;
-  }
-  // Classic file input (must not use capture; avoid display:none on some WebViews)
-  const input = document.getElementById("att-file-input");
-  if (!input) {
-    showToast("ورودی فایل یافت نشد", "error");
-    return;
-  }
-  input.value = "";
-  input.click();
+function onAttFilesSelected(e) {
+  var input = e.target;
+  var list = input.files ? Array.from(input.files) : [];
+  // reset after reading so same file can be chosen again
+  setTimeout(function () {
+    input.value = "";
+  }, 0);
+  handleSelectedFiles(list);
 }
 
 async function refreshAttachmentIndicators() {
   try {
-    const { gy, gm, gd } = getCurrentSelectedGregorian();
-    const btn = document.getElementById("attach-btn");
+    var sel = getCurrentSelectedGregorian();
+    var btn = document.getElementById("attach-btn");
     if (btn) {
-      const has = await hasAttachments(gy, gm, gd);
+      var has = await hasAttachments(sel.gy, sel.gm, sel.gd);
       btn.classList.toggle("has-attach", has);
     }
   } catch (_) {}
 
-  const cells = document.querySelectorAll(".day-cell[data-gy]");
-  for (const cell of cells) {
-    const gy = +cell.dataset.gy;
-    const gm = +cell.dataset.gm;
-    const gd = +cell.dataset.gd;
-    if (!gy) continue;
-    hasAttachments(gy, gm, gd).then((has) => {
-      let dot = cell.querySelector(".att-dot");
-      if (has && !dot) {
-        dot = document.createElement("span");
-        dot.className = "att-dot";
-        dot.textContent = "📎";
-        dot.setAttribute("aria-hidden", "true");
-        cell.appendChild(dot);
-      } else if (!has && dot) {
-        dot.remove();
-      }
-    });
+  var cells = document.querySelectorAll(".day-cell[data-gy]");
+  for (var i = 0; i < cells.length; i++) {
+    (function (cell) {
+      var gy = +cell.dataset.gy;
+      var gm = +cell.dataset.gm;
+      var gd = +cell.dataset.gd;
+      if (!gy) return;
+      hasAttachments(gy, gm, gd).then(function (has) {
+        var dot = cell.querySelector(".att-dot");
+        if (has && !dot) {
+          dot = document.createElement("span");
+          dot.className = "att-dot";
+          dot.textContent = "📎";
+          dot.setAttribute("aria-hidden", "true");
+          cell.appendChild(dot);
+        } else if (!has && dot) {
+          dot.remove();
+        }
+      });
+    })(cells[i]);
   }
 }
 
@@ -562,10 +492,10 @@ function setupAttachments() {
   document.getElementById("close-att-modal")?.addEventListener("click", closeAttachmentsDialog);
   document.getElementById("close-att-btn")?.addEventListener("click", closeAttachmentsDialog);
   document.getElementById("att-backdrop")?.addEventListener("click", closeAttachmentsDialog);
-  document.getElementById("att-add-btn")?.addEventListener("click", onAddAttachmentClick);
+  // File input: use change only — open via <label for="att-file-input">
   document.getElementById("att-file-input")?.addEventListener("change", onAttFilesSelected);
   document.getElementById("att-text-save")?.addEventListener("click", saveTextAttachmentEdit);
-  document.getElementById("att-text-cancel")?.addEventListener("click", () => {
+  document.getElementById("att-text-cancel")?.addEventListener("click", function () {
     document.getElementById("att-text-editor")?.classList.add("hidden");
   });
 }
