@@ -420,8 +420,9 @@
       <div class="modal-body">
         <p class="note-date-label" id="att-date-label">—</p>
         <p class="modal-desc">می‌توانید تصویر، صدا، ویدئو، متن یا هر فایل دیگری را به این روز پیوست کنید (حداکثر ۲۵ مگابایت برای هر فایل).</p>
-        <input type="file" id="att-file-input" multiple hidden />
-        <button type="button" id="att-add-btn" class="primary-btn">➕ افزودن فایل</button>
+        <input type="file" id="att-file-input" class="att-file-input-visually-hidden" multiple accept="*/*" />
+        <button type="button" id="att-add-btn" class="primary-btn">➕ افزودن فایل از حافظه</button>
+        <p class="modal-desc att-hint">از منوی سیستم گزینه «فایل‌ها» یا «گالری» را انتخاب کنید؛ گزینه «ضبط صدا» فقط برای ضبط است و پیوست عادی نیست.</p>
         <div id="att-list" class="att-list"></div>
         <div id="att-preview" class="att-preview hidden"></div>
         <div id="att-text-editor" class="att-text-editor hidden">

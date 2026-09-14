@@ -276,7 +276,10 @@ async function exportAttachmentsBackup() {
   });
   const out = [];
   for (const r of rows) {
-    const buf = await r.blob.arrayBuffer();
+    let buf;
+    if (r.data != null) buf = r.data;
+    else if (r.blob instanceof Blob) buf = await r.blob.arrayBuffer();
+    else continue;
     const bytes = new Uint8Array(buf);
     let binary = "";
     const chunk = 0x8000;
@@ -326,9 +329,9 @@ async function importAttachmentsBackup(file) {
       dayKey: f.dayKey,
       name: f.name,
       mime: f.mime,
-      size: f.size,
+      size: f.size || bytes.byteLength,
       kind: f.kind,
-      blob: new Blob([bytes], { type: f.mime || "application/octet-stream" }),
+      data: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
       createdAt: f.createdAt || Date.now(),
       updatedAt: f.updatedAt || Date.now()
     };
