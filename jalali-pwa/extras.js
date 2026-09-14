@@ -568,6 +568,12 @@ function setupExtras() {
     setFocusMode(!isFocusMode());
     showToast(isFocusMode() ? "حالت تمرکز فعال شد" : "حالت تمرکز خاموش شد");
   });
+  document.getElementById("exit-focus-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFocusMode(false);
+    showToast("حالت تمرکز خاموش شد");
+  });
   document.getElementById("extras-close-x")?.addEventListener("click", closeExtrasModal);
   document.getElementById("extras-close-btn")?.addEventListener("click", closeExtrasModal);
   document.getElementById("extras-backdrop")?.addEventListener("click", closeExtrasModal);
