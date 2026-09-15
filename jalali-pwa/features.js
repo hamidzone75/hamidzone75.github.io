@@ -364,7 +364,6 @@ function renderDashboard() {
   const el = document.getElementById("dashboard-strip");
   if (!el) return;
   const now = getAllDatesNow();
-  const shift = getShiftForJalali(now.jalali.year, now.jalali.month, now.jalali.day);
   const rems = getRemindersForDate(
     now.gregorian.year,
     now.gregorian.month,
@@ -387,15 +386,11 @@ function renderDashboard() {
 
   const s = computeStats();
   el.innerHTML =
-    '<div class="dash-item"><span class="dash-k">شیفت</span><span class="dash-v">روز ' +
-    shift.dayShift +
-    " / شب " +
-    shift.nightShift +
-    '</span></div><div class="dash-item"><span class="dash-k">نزدیک‌ترین یادآوری</span><span class="dash-v">' +
+    '<div class="dash-item dash-wide"><span class="dash-k">نزدیک‌ترین یادآوری</span><span class="dash-v">' +
     (nearest
       ? toPersianDigits(nearest.time) + " — " + escapeHtml(nearest.title || "")
       : "—") +
-    '</span></div><div class="dash-item"><span class="dash-k">آمار</span><span class="dash-v">' +
+    '</span></div><div class="dash-item dash-wide"><span class="dash-k">آمار</span><span class="dash-v">' +
     toPersianDigits(s.noteCount) +
     " یادداشت · " +
     toPersianDigits(s.remActive) +

@@ -1302,6 +1302,10 @@ input[type="time"].form-input { min-height: 44px; }
   flex-direction: column;
   gap: 2px;
 }
+.dash-item.dash-wide {
+  flex: 1 1 45%;
+  min-width: 140px;
+}
 .dash-k {
   font-size: 0.68rem;
   color: var(--muted);
