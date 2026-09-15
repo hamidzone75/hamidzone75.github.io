@@ -111,6 +111,149 @@ function setNote(gy, gm, gd, text) {
 function hasNote(gy, gm, gd) { return !!getNote(gy, gm, gd); }
 
 // ===================== Init =====================
+
+// ===================== Android / browser Back button =====================
+const APP_MODAL_CLOSE_ORDER = [
+  "confirm-modal",
+  "attachments-modal",
+  "extras-modal",
+  "feature-modal",
+  "month-picker-modal",
+  "day-summary-modal",
+  "manage-reminders-modal",
+  "reminder-modal",
+  "note-modal",
+  "settings-modal"
+];
+
+let _backNavReady = false;
+let _exitConfirmOpen = false;
+
+function isAppModalOpen(id) {
+  const el = document.getElementById(id);
+  return !!(el && !el.classList.contains("hidden"));
+}
+
+function getOpenAppModals() {
+  return APP_MODAL_CLOSE_ORDER.filter(isAppModalOpen);
+}
+
+/** Close the top-most open modal. Returns true if something was closed. */
+function closeTopAppModal() {
+  const open = getOpenAppModals();
+  if (!open.length) return false;
+  const id = open[0]; // highest priority first in APP_MODAL_CLOSE_ORDER
+
+  if (id === "confirm-modal") {
+    closeConfirm(false);
+    return true;
+  }
+  if (id === "note-modal" && typeof closeNoteDialog === "function") {
+    closeNoteDialog();
+    return true;
+  }
+  if (id === "reminder-modal" && typeof closeReminderDialog === "function") {
+    closeReminderDialog();
+    return true;
+  }
+  if (id === "manage-reminders-modal" && typeof closeManageReminders === "function") {
+    closeManageReminders();
+    return true;
+  }
+  if (id === "settings-modal" && typeof closeSettings === "function") {
+    closeSettings();
+    return true;
+  }
+  if (id === "month-picker-modal" && typeof closeMonthPicker === "function") {
+    closeMonthPicker();
+    return true;
+  }
+  if (id === "day-summary-modal" && typeof closeDaySummary === "function") {
+    closeDaySummary();
+    return true;
+  }
+  if (id === "attachments-modal" && typeof closeAttachmentsDialog === "function") {
+    closeAttachmentsDialog();
+    return true;
+  }
+  if (id === "extras-modal" && typeof closeExtrasModal === "function") {
+    closeExtrasModal();
+    return true;
+  }
+  if (id === "feature-modal") {
+    const el = document.getElementById("feature-modal");
+    if (el) el.classList.add("hidden");
+    return true;
+  }
+
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add("hidden");
+    return true;
+  }
+  return false;
+}
+
+function armBackHistory() {
+  try {
+    history.pushState({ appBack: 1 }, "");
+  } catch (_) {}
+}
+
+async function handleAppBackButton() {
+  // 1) Close open modal / dialog first
+  if (closeTopAppModal()) {
+    armBackHistory();
+    return;
+  }
+
+  // 2) No modal — ask before leaving the app
+  if (_exitConfirmOpen) {
+    armBackHistory();
+    return;
+  }
+  _exitConfirmOpen = true;
+  let leave = false;
+  try {
+    leave = await showConfirm(
+      "می‌خواهید از برنامه خارج شوید؟",
+      "خروج از برنامه",
+      { okText: "خروج", cancelText: "ماندن" }
+    );
+  } finally {
+    _exitConfirmOpen = false;
+  }
+
+  if (leave) {
+    // Leave the PWA / tab: go back past our sentinel state
+    try {
+      _backNavReady = false;
+      history.go(-1);
+      // If still here (standalone install), try another step
+      setTimeout(() => {
+        try {
+          history.go(-1);
+        } catch (_) {}
+      }, 120);
+    } catch (_) {}
+  } else {
+    armBackHistory();
+  }
+}
+
+function setupBackNavigation() {
+  // Sentinel so the first device BACK stays inside the app
+  armBackHistory();
+  _backNavReady = true;
+
+  window.addEventListener("popstate", function () {
+    if (!_backNavReady) return;
+    // Re-enter app handling asynchronously (confirm uses promise)
+    handleAppBackButton();
+  });
+}
+
+
 function init() {
   applyTheme(getTheme());
   applySoundUI();
@@ -142,6 +285,9 @@ function init() {
 
   // Startup day summary (notes + reminders)
   setTimeout(maybeShowStartupDaySummary, 400);
+
+  // Device BACK: close modals, then confirm exit
+  setupBackNavigation();
 }
 
 function setupEvents() {
@@ -696,12 +842,16 @@ function setupCalendarSwipe() {
 // ===================== Confirm Modal =====================
 let _confirmResolve = null;
 
-function showConfirm(message, title) {
+function showConfirm(message, title, options) {
   return new Promise((resolve) => {
     _confirmResolve = resolve;
     const modal = document.getElementById("confirm-modal");
-    document.getElementById("confirm-title").textContent = title || "تأیید حذف";
-    document.getElementById("confirm-message").textContent = message || "آیا از حذف این مورد مطمئن هستید؟";
+    document.getElementById("confirm-title").textContent = title || "تأیید";
+    document.getElementById("confirm-message").textContent = message || "آیا مطمئن هستید؟";
+    const okBtn = document.getElementById("confirm-ok-btn");
+    const cancelBtn = document.getElementById("confirm-cancel-btn");
+    if (okBtn) okBtn.textContent = (options && options.okText) || "بله، حذف شود";
+    if (cancelBtn) cancelBtn.textContent = (options && options.cancelText) || "انصراف";
     modal.classList.remove("hidden");
     if (typeof Sounds !== "undefined") Sounds.open();
   });
