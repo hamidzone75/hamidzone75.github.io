@@ -55,88 +55,133 @@ function getMonthLength(hy, hm) {
 }
 
 // ===================== Jalali =====================
+// Embedded from jalaali-js (Borkowski algorithm) — verified leaps & conversions
+
+const JALAALI_BREAKS = [
+  -61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210,
+  1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178
+];
+const MIN_JALAALI_YEAR = JALAALI_BREAKS[0];
+const MAX_JALAALI_YEAR = JALAALI_BREAKS[JALAALI_BREAKS.length - 1] - 1;
+
+function div(a, b) { return ~~(a / b); }
+function mod(a, b) { return a - ~~(a / b) * b; }
+
+function jalCalCore(jy) {
+  if (!Number.isFinite(jy) || jy < MIN_JALAALI_YEAR || jy > MAX_JALAALI_YEAR) {
+    throw new RangeError("Invalid Jalaali year " + jy);
+  }
+  const gy = jy + 621;
+  let leapJ = -14;
+  let jp = JALAALI_BREAKS[0];
+  let jm = 0;
+  let jump = 0;
+  for (let i = 1; i < JALAALI_BREAKS.length; i += 1) {
+    jm = JALAALI_BREAKS[i];
+    jump = jm - jp;
+    if (jy < jm) break;
+    leapJ = leapJ + div(jump, 33) * 8 + div(mod(jump, 33), 4);
+    jp = jm;
+  }
+  const n = jy - jp;
+  leapJ = leapJ + div(n, 33) * 8 + div(mod(n, 33) + 3, 4);
+  if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+  const leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150;
+  return { gy: gy, march: 20 + leapJ - leapG, jump: jump, n: n };
+}
+
+function leapFromCycle(jump, n) {
+  let adjusted = n;
+  if (jump - n < 6) adjusted = n - jump + div(jump + 4, 33) * 33;
+  let leap = mod(mod(adjusted + 1, 33) - 1, 4);
+  if (leap === -1) leap = 4;
+  return leap;
+}
+
+function jalCalLeap(jy) {
+  if (!Number.isFinite(jy) || jy < MIN_JALAALI_YEAR || jy > MAX_JALAALI_YEAR) {
+    throw new RangeError("Invalid Jalaali year " + jy);
+  }
+  let jp = JALAALI_BREAKS[0];
+  let jm = 0;
+  let jump = 0;
+  for (let i = 1; i < JALAALI_BREAKS.length; i += 1) {
+    jm = JALAALI_BREAKS[i];
+    jump = jm - jp;
+    if (jy < jm) break;
+    jp = jm;
+  }
+  return leapFromCycle(jump, jy - jp);
+}
+
+function jalCal(jy) {
+  const core = jalCalCore(jy);
+  return { leap: leapFromCycle(core.jump, core.n), gy: core.gy, march: core.march };
+}
+
+function g2d(gy, gm, gd) {
+  let d =
+    div((gy + div(gm - 8, 6) + 100100) * 1461, 4) +
+    div(153 * mod(gm + 9, 12) + 2, 5) +
+    gd -
+    34840408;
+  d = d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752;
+  return d;
+}
+
+function d2g(jdn) {
+  let j = 4 * jdn + 139361631;
+  j = j + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+  const i = div(mod(j, 1461), 4) * 5 + 308;
+  const gd = div(mod(i, 153), 5) + 1;
+  const gm = mod(div(i, 153), 12) + 1;
+  const gy = div(j, 1461) - 100100 + div(8 - gm, 6);
+  return { gy: gy, gm: gm, gd: gd };
+}
+
+function j2d(jy, jm, jd) {
+  const r = jalCalCore(jy);
+  return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1;
+}
+
+function d2j(jdn) {
+  const gy = d2g(jdn).gy;
+  let jy = gy - 621;
+  const r = jalCal(jy);
+  const jdn1f = g2d(gy, 3, r.march);
+  let k = jdn - jdn1f;
+  let jm, jd;
+  if (k >= 0) {
+    if (k <= 185) {
+      jm = 1 + div(k, 31);
+      jd = mod(k, 31) + 1;
+      return { jy: jy, jm: jm, jd: jd };
+    }
+    k -= 186;
+  } else {
+    jy -= 1;
+    k += 179;
+    if (r.leap === 1) k += 1;
+  }
+  jm = 7 + div(k, 30);
+  jd = mod(k, 30) + 1;
+  return { jy: jy, jm: jm, jd: jd };
+}
 
 function toJalaali(gy, gm, gd) {
-  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-  let jy, jm, jd, gy2, days;
-
-  if (gy > 1600) {
-    jy = 979;
-    gy -= 1600;
-  } else {
-    jy = 0;
-    gy -= 621;
-  }
-
-  gy2 = (gm > 2) ? (gy + 1) : gy;
-  days = (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) +
-         Math.floor((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
-
-  jy += 33 * Math.floor(days / 12053);
-  days %= 12053;
-  jy += 4 * Math.floor(days / 1461);
-  days %= 1461;
-
-  if (days > 365) {
-    jy += Math.floor((days - 1) / 365);
-    days = (days - 1) % 365;
-  }
-
-  if (days < 186) {
-    jm = 1 + Math.floor(days / 31);
-    jd = 1 + (days % 31);
-  } else {
-    jm = 7 + Math.floor((days - 186) / 30);
-    jd = 1 + ((days - 186) % 30);
-  }
-
-  return { jy, jm, jd };
+  return d2j(g2d(gy, gm, gd));
 }
 
 function toGregorian(jy, jm, jd) {
-  let gy, gm, gd, days;
-
-  if (jy > 979) {
-    gy = 1600;
-    jy -= 979;
-  } else {
-    gy = 621;
-  }
-
-  days = (365 * jy) + Math.floor(jy / 33) * 8 + Math.floor(((jy % 33) + 3) / 4) + 78 + jd +
-         ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30 + 186));
-
-  gy += 400 * Math.floor(days / 146097);
-  days %= 146097;
-
-  if (days > 36524) {
-    gy += 100 * Math.floor(--days / 36524);
-    days %= 36524;
-    if (days >= 365) days++;
-  }
-
-  gy += 4 * Math.floor(days / 1461);
-  days %= 1461;
-
-  if (days > 365) {
-    gy += Math.floor((days - 1) / 365);
-    days = (days - 1) % 365;
-  }
-
-  gd = days + 1;
-
-  const sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28,
-                 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-  for (gm = 0; gm < 13 && gd > sal_a[gm]; gm++) {
-    gd -= sal_a[gm];
-  }
-
-  return { gy, gm, gd };
+  return d2g(j2d(jy, jm, jd));
 }
 
 function isLeapJalali(jy) {
-  return (((((jy - (jy > 0 ? 474 : 473)) % 2820) + 474 + 38) * 682) % 2816) < 682;
+  try {
+    return jalCalLeap(jy) === 0;
+  } catch (_) {
+    return false;
+  }
 }
 
 function daysInJalaliMonth(jy, jm) {
@@ -145,10 +190,11 @@ function daysInJalaliMonth(jy, jm) {
   return isLeapJalali(jy) ? 30 : 29;
 }
 
+/** 0 = Saturday … 6 = Friday; UTC avoids timezone off-by-one */
 function getJalaliWeekday(jy, jm, jd) {
   const g = toGregorian(jy, jm, jd);
-  const date = new Date(g.gy, g.gm - 1, g.gd);
-  return (date.getDay() + 1) % 7; // 0 = Saturday
+  const date = new Date(Date.UTC(g.gy, g.gm - 1, g.gd));
+  return (date.getUTCDay() + 1) % 7;
 }
 
 // ===================== Hijri (Tabular + overrides) =====================
@@ -213,8 +259,9 @@ function toPersianDigits(num) {
 
 function getAllDatesFor(gy, gm, gd) {
   const { jy, jm, jd } = toJalaali(gy, gm, gd);
-  const date = new Date(gy, gm - 1, gd);
-  const weekdayIndex = (date.getDay() + 1) % 7;
+  // UTC weekday — same as getJalaliWeekday (avoids TZ off-by-one)
+  const date = new Date(Date.UTC(gy, gm - 1, gd));
+  const weekdayIndex = (date.getUTCDay() + 1) % 7;
   const { hy, hm, hd } = gregorianToHijri(gy, gm, gd);
 
   return {

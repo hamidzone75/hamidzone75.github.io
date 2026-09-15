@@ -66,12 +66,27 @@ function createReminder({
   nValue = 1,           // for everyN*
   weekday = 0,          // 0=Sat ... 6=Fri (for weekly / nthWeekday)
   nth = 1,              // 1..4 or -1 for last
-  enabled = true
+  enabled = true,
+  jy, jm, jd            // optional Jalali base (preferred for yearly/monthly)
 }) {
+  // Always persist Jalali month/day so yearly/monthly stay on the same Persian date
+  if (jy == null || jm == null || jd == null) {
+    try {
+      const j = toJalaali(gy, gm, gd);
+      jy = j.jy;
+      jm = j.jm;
+      jd = j.jd;
+    } catch (_) {
+      jy = jy || null;
+      jm = jm || null;
+      jd = jd || null;
+    }
+  }
   return {
     id: generateId(),
     title: title || "یادآوری",
     gy, gm, gd,
+    jy, jm, jd,
     time: time || "09:00",
     recurType: recurType || "once",
     nValue: nValue || 1,
@@ -148,11 +163,33 @@ function matchesDate(rem, gy, gm, gd) {
     case "weekly":
       return target >= base && persianWeekday === rem.weekday;
 
-    case "monthly":
-      return target >= base && gd === rem.gd;
+    case "monthly": {
+      // Same Jalali day-of-month each month
+      const j = toJalaali(gy, gm, gd);
+      const remJd = rem.jd != null ? rem.jd : (rem.gy != null ? toJalaali(rem.gy, rem.gm, rem.gd).jd : gd);
+      return target >= base && j.jd === remJd;
+    }
 
-    case "yearly":
-      return target >= base && gm === rem.gm && gd === rem.gd;
+    case "yearly": {
+      // Same Jalali month+day every year (e.g. birthday 22 Esfand stays 22 Esfand)
+      const j = toJalaali(gy, gm, gd);
+      let rjm = rem.jm;
+      let rjd = rem.jd;
+      if (rjm == null || rjd == null) {
+        try {
+          const rj = toJalaali(rem.gy, rem.gm, rem.gd);
+          rjm = rj.jm;
+          rjd = rj.jd;
+        } catch (_) {
+          return target >= base && gm === rem.gm && gd === rem.gd;
+        }
+      }
+      // Non-leap years: Esfand 30 → Esfand 29
+      if (rjm === 12 && rjd >= 30 && !isLeapJalali(j.jy)) {
+        return target >= base && j.jm === 12 && j.jd === daysInJalaliMonth(j.jy, 12);
+      }
+      return target >= base && j.jm === rjm && j.jd === rjd;
+    }
 
     case "everyNDays":
       if (target < base) return false;
@@ -168,9 +205,26 @@ function matchesDate(rem, gy, gm, gd) {
       return monthDiff >= 0 && monthDiff % (rem.nValue || 1) === 0 && gd === rem.gd;
     }
 
-    case "everyNYears":
+    case "everyNYears": {
       if (target < base) return false;
-      return (gy - rem.gy) % (rem.nValue || 1) === 0 && gm === rem.gm && gd === rem.gd;
+      const j = toJalaali(gy, gm, gd);
+      let rjm = rem.jm;
+      let rjd = rem.jd;
+      let rjy = rem.jy;
+      if (rjm == null || rjd == null || rjy == null) {
+        try {
+          const rj = toJalaali(rem.gy, rem.gm, rem.gd);
+          rjm = rj.jm; rjd = rj.jd; rjy = rj.jy;
+        } catch (_) {
+          return (gy - rem.gy) % (rem.nValue || 1) === 0 && gm === rem.gm && gd === rem.gd;
+        }
+      }
+      if ((j.jy - rjy) % (rem.nValue || 1) !== 0) return false;
+      if (rjm === 12 && rjd >= 30 && !isLeapJalali(j.jy)) {
+        return j.jm === 12 && j.jd === daysInJalaliMonth(j.jy, 12);
+      }
+      return j.jm === rjm && j.jd === rjd;
+    }
 
     case "weekdays":
       return target >= base && persianWeekday >= 0 && persianWeekday <= 5; // Sat-Thu
@@ -216,7 +270,14 @@ function describeRecurrence(rem) {
     case "daily": return "هر روز";
     case "weekly": return "هر " + WEEKDAY_NAMES[rem.weekday];
     case "monthly": return "هر ماه (روز " + toPersianDigits(rem.gd) + ")";
-    case "yearly": return "هر سال";
+    case "yearly": {
+      const rjd = rem.jd != null ? rem.jd : null;
+      const rjm = rem.jm != null ? rem.jm : null;
+      if (rjd && rjm && typeof PERSIAN_MONTHS !== "undefined") {
+        return "هر سال (" + toPersianDigits(rjd) + " " + PERSIAN_MONTHS[rjm - 1] + ")";
+      }
+      return "هر سال";
+    }
     case "everyNDays": return "هر " + toPersianDigits(rem.nValue) + " روز";
     case "everyNWeeks": return "هر " + toPersianDigits(rem.nValue) + " هفته (" + WEEKDAY_NAMES[rem.weekday] + ")";
     case "everyNMonths": return "هر " + toPersianDigits(rem.nValue) + " ماه";
