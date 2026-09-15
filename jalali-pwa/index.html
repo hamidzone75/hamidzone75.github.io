@@ -267,26 +267,7 @@
         <button id="close-manage-btn" class="secondary-btn">بستن</button>
       </div>
     </div>
-  </div>
-
-
-  <!-- Confirm Delete Modal -->
-  <div id="confirm-modal" class="modal hidden">
-    <div class="modal-backdrop" id="confirm-backdrop"></div>
-    <div class="modal-content confirm-modal-content">
-      <div class="modal-header">
-        <h2 id="confirm-title">تأیید حذف</h2>
-        <button id="confirm-close-x" class="close-btn">×</button>
-      </div>
-      <div class="modal-body">
-        <p id="confirm-message" class="confirm-message">آیا از حذف این مورد مطمئن هستید؟</p>
-      </div>
-      <div class="modal-footer">
-        <button id="confirm-ok-btn" class="danger-btn">بله، حذف شود</button>
-        <button id="confirm-cancel-btn" class="secondary-btn">انصراف</button>
-      </div>
-    </div>
-  </div>
+  </div></div>
 
 
   <!-- Day Summary Modal (notes + reminders) -->
@@ -545,5 +526,24 @@
   <script src="attachments.js"></script>
   <script src="extras.js"></script>
   <script src="app.js"></script>
+
+  <!-- Confirm Delete Modal (highest z-index — above other modals) -->
+  <div id="confirm-modal" class="modal hidden">
+    <div class="modal-backdrop" id="confirm-backdrop"></div>
+    <div class="modal-content confirm-modal-content">
+      <div class="modal-header">
+        <h2 id="confirm-title">تأیید حذف</h2>
+        <button id="confirm-close-x" class="close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-message" class="confirm-message">آیا از حذف این مورد مطمئن هستید؟</p>
+      </div>
+      <div class="modal-footer">
+        <button id="confirm-ok-btn" class="danger-btn">بله، حذف شود</button>
+        <button id="confirm-cancel-btn" class="secondary-btn">انصراف</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

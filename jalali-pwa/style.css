@@ -1084,8 +1084,16 @@ input[type="time"].form-input { min-height: 44px; }
 }
 #confirm-modal {
   align-items: center;
+  /* Must sit above other open modals (attachments, notes, extras, ...) */
+  z-index: 10050 !important;
+}
+#confirm-modal .modal-backdrop {
+  z-index: 10050;
+  background: rgba(0, 0, 0, 0.55);
 }
 #confirm-modal .modal-content {
+  position: relative;
+  z-index: 10051;
   border-radius: 20px;
   border-bottom: 1px solid var(--border);
   max-height: none;
