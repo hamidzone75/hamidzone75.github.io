@@ -9,7 +9,7 @@ const COLORS_KEY = "calendarDayColors";
 const COUNTDOWN_KEY = "calendarCountdowns";
 const TRASH_KEY = "calendarTrash";
 const PIN_LOCK_KEY = "calendarPinLock";
-const SHIFT_VIS_KEY = "calendarShiftVisible";
+const SHIFT_VIS_KEY = "calendarShiftVisibleV2";
 const TRASH_MAX_DAYS = 14;
 
 // ---------- storage helpers ----------
@@ -32,6 +32,7 @@ function gKey(gy, gm, gd) {
 // ---------- Shift visibility ----------
 function isShiftVisible() {
   const v = localStorage.getItem(SHIFT_VIS_KEY);
+  // Default: visible (only hide when user explicitly sets "0")
   return v !== "0";
 }
 function setShiftVisible(on) {
@@ -40,7 +41,15 @@ function setShiftVisible(on) {
 }
 function applyShiftVisibility() {
   const el = document.getElementById("shift-info");
-  if (el) el.classList.toggle("hidden", !isShiftVisible());
+  if (el) {
+    const show = isShiftVisible();
+    el.classList.toggle("hidden", !show);
+    // Ensure layout even if global .hidden was applied
+    if (show) {
+      el.style.display = "";
+      el.removeAttribute("hidden");
+    }
+  }
   const cb = document.getElementById("shift-visible-toggle");
   if (cb) cb.checked = isShiftVisible();
 }

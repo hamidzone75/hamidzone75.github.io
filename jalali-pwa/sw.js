@@ -1,4 +1,4 @@
-const CACHE_NAME = "jalali-calendar-v41";
+const CACHE_NAME = "jalali-calendar-v42";
 const ASSETS = [
   "./",
   "./index.html",

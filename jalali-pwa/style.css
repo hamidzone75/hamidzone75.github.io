@@ -1182,6 +1182,9 @@ input[type="time"].form-input { min-height: 44px; }
   backdrop-filter: blur(var(--blur));
   -webkit-backdrop-filter: blur(var(--blur));
 }
+.shift-info.hidden {
+  display: none !important;
+}
 .shift-line {
   font-size: 0.72rem;
   font-weight: 700;
