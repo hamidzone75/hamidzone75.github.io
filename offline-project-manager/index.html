@@ -1,18 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="fa" dir="rtl" translate="no" class="notranslate">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/offline-barcode-scanner/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f172a" />
-    <meta name="description" content="High-Performance Offline-Capable Multi-Barcode Scanner Engine for PWA" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="description" content="نرم‌افزار مدیریت پروژه سبک، آفلاین و کاملاً محلی با تقویم شمسی و قمری" />
+    <meta name="google" content="notranslate" />
+    <meta name="robots" content="notranslate" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>Offline Barcode Scanner — Phase 4</title>
-    <script type="module" crossorigin src="/offline-barcode-scanner/assets/index-DxadgBil.js"></script>
-    <link rel="stylesheet" crossorigin href="/offline-barcode-scanner/assets/index-CaEVMY44.css">
-  <link rel="manifest" href="/offline-barcode-scanner/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/offline-barcode-scanner/registerSW.js"></script></head>
-  <body>
-    <div id="app"></div>
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="پروژه من" />
+    <meta name="application-name" content="پروژه من" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <title>پروژه من</title>
+    <script type="module" crossorigin src="/pwa-project-manager/assets/index-BEykrNJy.js"></script>
+    <link rel="modulepreload" crossorigin href="/pwa-project-manager/assets/vendor-CYWrBRhC.js">
+    <link rel="modulepreload" crossorigin href="/pwa-project-manager/assets/utils-CgQsgtU5.js">
+    <link rel="modulepreload" crossorigin href="/pwa-project-manager/assets/db-BM1UD617.js">
+    <link rel="stylesheet" crossorigin href="/pwa-project-manager/assets/index-D7L8otRd.css">
+  <link rel="manifest" href="/pwa-project-manager/manifest.webmanifest"></head>
+  <body class="notranslate" translate="no">
+    <script>
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+        document.title = 'پروژه من';
+      })();
+    </script>
+    <div id="root"></div>
   </body>
 </html>
