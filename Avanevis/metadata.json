@@ -1,0 +1,6 @@
+{
+  "name": "AvaNevis - Persian Speech Recognition PWA",
+  "description": "Complete Persian real-time speech-to-text and offline transcription Progressive Web App with audio recording, wave visualizer, voice commands, and typography tools.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
